@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Knowledge Circle</title>
+  <desc id="desc">Symbole abstrait minimal pour la console d'évaluation orale.</desc>
+  <circle cx="256" cy="256" r="226" fill="#f6f9fb"/>
+  <path
+    d="M376 152a164 164 0 1 0 0 208"
+    fill="none"
+    stroke="#26386f"
+    stroke-width="58"
+    stroke-linecap="round"
+  />
+  <circle cx="256" cy="256" r="55" fill="#26386f"/>
+  <path
+    d="M336 255h82"
+    fill="none"
+    stroke="#d9822b"
+    stroke-width="44"
+    stroke-linecap="round"
+  />
+</svg>
