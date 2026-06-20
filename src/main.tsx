@@ -1825,20 +1825,24 @@ ${recommendations}`;
     }
 
     updateRating("finalLevel", suggestedLevel);
-    scrollToFinalJudgmentBank();
+    scrollAfterFinalLevelSelection(suggestedLevel);
   }
 
   function handleFinalLevelChange(value: CEFRLevel | "") {
     updateRating("finalLevel", value);
 
     if (value) {
-      scrollToFinalJudgmentBank();
+      scrollAfterFinalLevelSelection(value);
     }
   }
 
-  function scrollToFinalJudgmentBank() {
+  function scrollAfterFinalLevelSelection(level: CEFRLevel) {
+    const nextCoherenceAlert = getCoherenceAlert(level, suggestedLevel, tagStats);
+    const selector = nextCoherenceAlert ? ".coherenceAlert" : ".phraseBankPanel";
+    const block: ScrollLogicalPosition = nextCoherenceAlert ? "center" : "start";
+
     window.setTimeout(() => {
-      document.querySelector(".phraseBankPanel")?.scrollIntoView({ block: "start", behavior: "auto" });
+      document.querySelector(selector)?.scrollIntoView({ block, behavior: "auto" });
     }, 0);
   }
 
