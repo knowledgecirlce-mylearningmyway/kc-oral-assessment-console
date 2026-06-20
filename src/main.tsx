@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Clipboard, Clock, HelpCircle, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
+import { Clipboard, Clock, HelpCircle, Layers, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import "./styles.css";
 
 type FrameworkId = "cefr-ccc" | "pfl2-sle";
@@ -2545,69 +2545,6 @@ ${recommendations}`;
     });
   }
 
-  function loadSampleData(frameworkId: FrameworkId) {
-    const config = frameworkConfigs[frameworkId];
-    const sample = createSession(frameworkId);
-
-    const sampleRatings: Partial<CriterionRating> =
-      frameworkId === "cefr-ccc"
-        ? {
-            fluency: "B2",
-            interaction: "B2",
-            grammar: "B1+",
-            vocabulary: "B2",
-            coherence: "B2",
-            pronunciation: "B2",
-            finalLevel: "B2",
-          }
-        : {
-            comprehensionQuestions: "B+",
-            fluency: "B+",
-            grammar: "B",
-            vocabulary: "B+",
-            coherence: "B+",
-            interaction: "B+",
-            justification: "B+",
-            abstraction: "C-",
-            finalLevel: "B+",
-          };
-
-    setSession({
-      ...sample,
-      candidate: {
-        ...sample.candidate,
-        fullName: frameworkId === "cefr-ccc" ? "Exemple CCC" : "Exemple PFL2/SLE",
-        email: frameworkId === "cefr-ccc" ? "exemple.ccc@knowledgecircle.ca" : "exemple.sle@knowledgecircle.ca",
-        evaluatorName: "Évaluateur test",
-        targetLevel: frameworkId === "cefr-ccc" ? "B2" : "B/C",
-        positionContext: "Données test pour vérifier la configuration.",
-      },
-      ratings: { ...createEmptyRatings(), ...sampleRatings },
-      notes: {
-        ...createEmptyNotes(),
-        generalObservations: "observation générale : communication fonctionnelle",
-        strengths:
-          frameworkId === "cefr-ccc"
-            ? "force communicative : bonne fluidité; exemple fort : a justifié une recommandation"
-            : "force PFL2/SLE : bonne interaction; preuve niveau C : argumentation nuancée",
-        challenges: frameworkId === "cefr-ccc" ? "discours : justification faible" : "discours et interaction : nuance limitée pour le niveau C",
-        finalJudgment:
-          frameworkId === "cefr-ccc"
-            ? "La personne candidate démontre une communication orale professionnelle généralement autonome, avec des preuves suffisantes pour soutenir le niveau retenu."
-            : "La personne candidate démontre un profil fonctionnel solide avec certaines preuves d'argumentation plus avancée, mais le niveau C doit rester interprété avec prudence.",
-      },
-      selectedStage: getFrameworkStages(config, frameworkId === "pfl2-sle")[0].id,
-      cExtensionEnabled: frameworkId === "pfl2-sle",
-      updatedAt: new Date().toISOString(),
-    });
-    setLastLiveStage(getFrameworkStages(config, frameworkId === "pfl2-sle")[0].id);
-    setCandidatePanelOpen(false);
-    setAssessmentStarted(true);
-    setViewMode("finalize");
-    setTagView("frequent");
-    setCopyStatus("");
-  }
-
   return (
     <div className="appShell">
       <header className="topHeader">
@@ -2620,6 +2557,7 @@ ${recommendations}`;
         </div>
         <div className="headerMeta" aria-label="État de l'évaluation en cours">
           <label className="frameworkSelect">
+            <Layers size={16} aria-hidden="true" />
             <span>Cadre</span>
             <select
               aria-label="Cadre d'évaluation"
@@ -2717,12 +2655,6 @@ ${recommendations}`;
                 <button className="secondaryButton" onClick={saveDraft}>
                   <Save size={16} aria-hidden="true" />
                   Sauvegarder
-                </button>
-                <button className="secondaryButton compactAction" onClick={() => loadSampleData("cefr-ccc")} type="button">
-                  Test CCC
-                </button>
-                <button className="secondaryButton compactAction" onClick={() => loadSampleData("pfl2-sle")} type="button">
-                  Test PFL2
                 </button>
                 {assessmentStarted ? (
                   <div className="modeSwitch" aria-label="Mode de travail">
@@ -3254,8 +3186,8 @@ function EvaluatorGuidePage({ framework, onClose }: { framework: FrameworkConfig
           <p className="eyebrow">Aide évaluateur</p>
           <h2>Guide rapide d'utilisation</h2>
           <p>
-            Utilisez cette console comme soutien pendant l'entretien, puis comme outil de structuration après le
-            départ de la personne candidate.
+            Commencez par choisir le cadre d'évaluation dans l'en-tête. La console ajuste ensuite les niveaux, les
+            étapes, les critères, les tags et le résumé selon le cadre sélectionné.
           </p>
         </div>
         <button className="primaryButton" onClick={onClose} type="button">
@@ -3273,6 +3205,16 @@ function EvaluatorGuidePage({ framework, onClose }: { framework: FrameworkConfig
       </div>
 
       <div className="guideGrid">
+        <section className="guideBlock guideBlockWide frameworkGuideBlock">
+          <h3>Choix du cadre</h3>
+          <ul>
+            <li><strong>CCC – CECR/CEFR</strong> : utilisez ce cadre pour les évaluations CCC et les rapports avec niveaux CECR/CEFR.</li>
+            <li><strong>PFL2 / SLE – B-C</strong> : utilisez ce cadre pour une estimation interne PFL2/SLE avec niveaux Inférieur à B, B-, B, B+, C-, C et C+.</li>
+            <li>Le choix du cadre change les étapes, les questions, les critères, les niveaux, les tags rapides et le libellé du résumé généré.</li>
+            <li>Le cadre doit être choisi avant de commencer l'entretien afin d'éviter de mélanger les preuves et les niveaux.</li>
+          </ul>
+        </section>
+
         <section className="guideBlock">
           <h3>Pendant l'entretien</h3>
           <ul>

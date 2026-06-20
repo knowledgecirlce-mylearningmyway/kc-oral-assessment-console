@@ -120,16 +120,23 @@ button:disabled {
 .frameworkSelect {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 30px;
-  padding: 4px 8px;
-  border: 1px solid #d7e2ec;
+  gap: 7px;
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 1px solid #8ab6d6;
   border-radius: 999px;
-  background: #ffffff;
-  color: #40536a;
+  background: #eef7fb;
+  color: #254767;
   font-size: 12px;
-  font-weight: 720;
+  font-weight: 780;
   white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(35, 82, 124, 0.12);
+}
+
+.frameworkSelect svg {
+  flex: 0 0 auto;
+  color: #2f74a3;
+  stroke-width: 2.4;
 }
 
 .frameworkSelect span {
@@ -137,7 +144,7 @@ button:disabled {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #6f7d8a;
+  color: #47677f;
   font-size: 10px;
   text-transform: uppercase;
 }
@@ -146,10 +153,15 @@ button:disabled {
   min-height: 22px;
   border: 0;
   background: transparent;
-  color: #2f4055;
+  color: #1f3854;
   font-size: 12px;
-  font-weight: 760;
+  font-weight: 820;
   outline: none;
+}
+
+.frameworkSelect:hover {
+  border-color: #5e9bc2;
+  background: #e5f3f8;
 }
 
 .headerHelpButton {
@@ -181,11 +193,6 @@ button:disabled {
 
 .headerMeta .timer svg {
   color: #d87928;
-}
-
-.compactAction {
-  min-height: 34px;
-  padding-inline: 10px;
 }
 
 .layout {
