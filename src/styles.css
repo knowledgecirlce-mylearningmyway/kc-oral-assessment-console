@@ -164,6 +164,30 @@ button:disabled {
   background: #e5f3f8;
 }
 
+.frameworkSelect.locked {
+  border-color: #c7d8e7;
+  background: #f4f7fa;
+  box-shadow: none;
+}
+
+.frameworkSelect select:disabled {
+  cursor: not-allowed;
+  color: #52606d;
+}
+
+.headerMeta .frameworkStatus {
+  border-color: #c7d8e7;
+  background: #f8fafc;
+  color: #40536a;
+}
+
+.headerMeta .frameworkStatus.ready,
+.headerMeta .frameworkStatus.locked {
+  border-color: #b7dfc8;
+  background: #f1faf4;
+  color: #2f7a4e;
+}
+
 .headerHelpButton {
   display: inline-flex;
   align-items: center;
@@ -193,6 +217,102 @@ button:disabled {
 
 .headerMeta .timer svg {
   color: #d87928;
+}
+
+.frameworkModalOverlay {
+  position: fixed;
+  inset: 72px 0 0;
+  z-index: 18;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 28px 16px;
+  background: rgba(245, 248, 252, 0.78);
+  backdrop-filter: blur(3px);
+}
+
+.frameworkModal {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  width: min(560px, 100%);
+  border: 1px solid #c9d9e7;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 18px;
+  box-shadow: 0 20px 48px rgba(31, 45, 67, 0.16);
+}
+
+.frameworkModalIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #b7d5e7;
+  border-radius: 8px;
+  background: #edf7fb;
+  color: #2c6f8d;
+}
+
+.frameworkModalIntro {
+  min-width: 0;
+}
+
+.frameworkModalIntro .eyebrow {
+  margin-bottom: 4px;
+  color: #65758b;
+}
+
+.frameworkModalIntro h2 {
+  margin: 0;
+  color: #1f2d43;
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.frameworkModalIntro p:not(.eyebrow) {
+  margin: 7px 0 0;
+  color: #52606d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.frameworkChoiceGrid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.frameworkChoiceButton {
+  display: grid;
+  gap: 5px;
+  min-height: 88px;
+  border: 1px solid #c9d9e7;
+  border-radius: 8px;
+  background: #f8fbfd;
+  color: #263442;
+  padding: 13px;
+  text-align: left;
+}
+
+.frameworkChoiceButton:hover {
+  border-color: #78aac2;
+  background: #eef8fb;
+  box-shadow: inset 3px 0 0 #2c6f8d;
+}
+
+.frameworkChoiceButton strong {
+  color: #1f3854;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.frameworkChoiceButton span {
+  color: #607487;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .layout {
@@ -694,6 +814,10 @@ button:disabled {
 
 .primaryButton:hover {
   background: #23667e;
+}
+
+.primaryButton:disabled:hover {
+  background: #2b7894;
 }
 
 .secondaryButton {
@@ -1635,6 +1759,15 @@ button:disabled {
     position: static;
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .frameworkModalOverlay {
+    inset: 112px 0 0;
+  }
+
+  .frameworkModal,
+  .frameworkChoiceGrid {
+    grid-template-columns: 1fr;
   }
 
   .layout {

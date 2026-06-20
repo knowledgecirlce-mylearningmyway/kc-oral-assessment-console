@@ -2039,6 +2039,7 @@ function getGroupShortLabel(group: QuickTagGroup) {
 
 function App() {
   const [session, setSession] = React.useState<OralAssessmentSession>(() => createSession());
+  const [frameworkChosen, setFrameworkChosen] = React.useState(false);
   const [candidatePanelOpen, setCandidatePanelOpen] = React.useState(true);
   const [assessmentStarted, setAssessmentStarted] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<ViewMode>("live");
@@ -2066,6 +2067,7 @@ function App() {
 
   const activeFramework = frameworkConfigs[session.frameworkId ?? "cefr-ccc"];
   const activeStages = getFrameworkStages(activeFramework, session.cExtensionEnabled);
+  const visibleStages = frameworkChosen ? activeStages : [];
   const activeCriteria = activeFramework.criteria;
   const activeLevels = activeFramework.levels;
   const activeQuickTagGroups = activeFramework.quickTagGroups;
@@ -2210,6 +2212,11 @@ function App() {
   );
 
   function saveDraft() {
+    if (!frameworkChosen) {
+      setSavedStatus("Choisissez d'abord le cadre d'évaluation avant de sauvegarder.");
+      return;
+    }
+
     const nextSession = { ...session, updatedAt: new Date().toISOString() };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
     setSession(nextSession);
@@ -2233,9 +2240,11 @@ function App() {
         ? normalized.selectedStage
         : normalizedStages[0].id;
       setSession({ ...normalized, selectedStage });
+      setFrameworkChosen(true);
       setCandidatePanelOpen(false);
       setAssessmentStarted(true);
       setViewMode("live");
+      setLastLiveStage(selectedStage);
       setSavedStatus("Brouillon local précédent chargé.");
     } catch {
       setSavedStatus("Le brouillon local n'a pas pu être chargé.");
@@ -2252,10 +2261,14 @@ function App() {
     }
 
     localStorage.removeItem(STORAGE_KEY);
-    setSession(createSession(session.frameworkId));
+    const freshSession = createSession();
+    setSession(freshSession);
+    setFrameworkChosen(false);
     setCandidatePanelOpen(true);
     setAssessmentStarted(false);
     setViewMode("live");
+    setLastLiveStage(freshSession.selectedStage);
+    setTagView("frequent");
     setPerformance({
       comprehension: 0,
       autonomy: 0,
@@ -2381,6 +2394,11 @@ ${recommendations}`;
   }
 
   function startAssessment() {
+    if (!frameworkChosen) {
+      setSavedStatus("Choisissez d'abord le cadre d'évaluation avant de commencer.");
+      return;
+    }
+
     setCandidatePanelOpen(false);
     setAssessmentStarted(true);
     setViewMode("live");
@@ -2499,9 +2517,14 @@ ${recommendations}`;
   }
 
   function changeFramework(frameworkId: FrameworkId) {
+    if (assessmentStarted) {
+      return;
+    }
+
     const config = frameworkConfigs[frameworkId];
     const firstStage = getFrameworkStages(config, false)[0].id;
 
+    setFrameworkChosen(true);
     setSession((current) => ({
       ...current,
       frameworkId,
@@ -2552,18 +2575,22 @@ ${recommendations}`;
           <img className="brandLogo" src={`${import.meta.env.BASE_URL}kc-logo.png`} alt="Knowledge Circle" />
           <div>
             <p className="eyebrow">Outil interne d'évaluation Knowledge Circle</p>
-            <h1>{activeFramework.appTitle}</h1>
+            <h1>{frameworkChosen ? activeFramework.appTitle : "Console d'évaluation orale KC"}</h1>
           </div>
         </div>
         <div className="headerMeta" aria-label="État de l'évaluation en cours">
-          <label className="frameworkSelect">
+          <label className={assessmentStarted ? "frameworkSelect locked" : "frameworkSelect"}>
             <Layers size={16} aria-hidden="true" />
             <span>Cadre</span>
             <select
               aria-label="Cadre d'évaluation"
-              value={activeFramework.id}
+              value={frameworkChosen ? activeFramework.id : ""}
+              disabled={assessmentStarted}
               onChange={(event) => changeFramework(event.target.value as FrameworkId)}
             >
+              <option value="" disabled>
+                Choisir un cadre
+              </option>
               {Object.values(frameworkConfigs).map((config) => (
                 <option key={config.id} value={config.id}>
                   {config.selectorLabel}
@@ -2571,8 +2598,13 @@ ${recommendations}`;
               ))}
             </select>
           </label>
-          <span>Mode: {activeFramework.modeLabel}</span>
-          <span>{session.candidate.client}</span>
+          {assessmentStarted ? (
+            <span className="frameworkStatus locked">Cadre verrouillé</span>
+          ) : frameworkChosen ? (
+            <span className="frameworkStatus ready">Cadre choisi</span>
+          ) : null}
+          <span>Mode: {frameworkChosen ? activeFramework.modeLabel : "À choisir"}</span>
+          <span>{frameworkChosen ? session.candidate.client : "Cadre à choisir"}</span>
           <span>{session.candidate.assessmentLanguage} - interaction orale</span>
           <span>{session.candidate.fullName || "Nouvelle personne candidate"}</span>
           <span>{session.candidate.assessmentDate}</span>
@@ -2586,6 +2618,36 @@ ${recommendations}`;
           </button>
         </div>
       </header>
+
+      {!frameworkChosen && !showGuidePage ? (
+        <div className="frameworkModalOverlay" role="dialog" aria-modal="true" aria-labelledby="frameworkModalTitle">
+          <section className="frameworkModal">
+            <div className="frameworkModalIcon" aria-hidden="true">
+              <Layers size={22} />
+            </div>
+            <div className="frameworkModalIntro">
+              <p className="eyebrow">Première étape</p>
+              <h2 id="frameworkModalTitle">Choisir le cadre d'évaluation</h2>
+              <p>
+                Sélectionnez le cadre avant de remplir l'évaluation. Ce choix sera verrouillé pendant l'entretien
+                afin d'éviter tout mélange de niveaux, de tags ou de critères.
+              </p>
+            </div>
+            <div className="frameworkChoiceGrid">
+              {Object.values(frameworkConfigs).map((config) => (
+                <button className="frameworkChoiceButton" key={config.id} onClick={() => changeFramework(config.id)} type="button">
+                  <strong>{config.selectorLabel}</strong>
+                  <span>
+                    {config.id === "cefr-ccc"
+                      ? "Rapport CCC avec niveaux CECR/CEFR."
+                      : "Profil interne PFL2 / SLE avec niveaux B-C."}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {showGuidePage ? (
         <main className="guidePageShell">
@@ -2602,7 +2664,7 @@ ${recommendations}`;
       >
         <nav className="stageRail" aria-label="Étapes de l'évaluation">
           <div className="railTitle">Étapes</div>
-          {activeStages.map((stage) => {
+          {visibleStages.map((stage) => {
             const isActiveStage = stage.id === session.selectedStage && assessmentStarted;
 
             return (
@@ -2678,6 +2740,7 @@ ${recommendations}`;
                   <button
                     className="primaryButton"
                     onClick={startAssessment}
+                    disabled={!frameworkChosen}
                   >
                     Passer à l'évaluation
                   </button>
@@ -2712,7 +2775,7 @@ ${recommendations}`;
                     type="date"
                     onChange={(value) => updateCandidate("assessmentDate", value)}
                   />
-                  <TextField label="Client" value={session.candidate.client} readOnly />
+                  <TextField label="Client" value={frameworkChosen ? session.candidate.client : "À choisir selon le cadre"} readOnly />
                   <TextField label="Langue d'évaluation" value={session.candidate.assessmentLanguage} readOnly />
                   <TextField label="Type d'évaluation" value={session.candidate.assessmentType} readOnly />
                   <TextField
