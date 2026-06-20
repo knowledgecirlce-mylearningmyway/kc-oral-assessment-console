@@ -117,6 +117,41 @@ button:disabled {
   white-space: nowrap;
 }
 
+.frameworkSelect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid #d7e2ec;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #40536a;
+  font-size: 12px;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.frameworkSelect span {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #6f7d8a;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.frameworkSelect select {
+  min-height: 22px;
+  border: 0;
+  background: transparent;
+  color: #2f4055;
+  font-size: 12px;
+  font-weight: 760;
+  outline: none;
+}
+
 .headerHelpButton {
   display: inline-flex;
   align-items: center;
@@ -146,6 +181,11 @@ button:disabled {
 
 .headerMeta .timer svg {
   color: #d87928;
+}
+
+.compactAction {
+  min-height: 34px;
+  padding-inline: 10px;
 }
 
 .layout {
@@ -337,6 +377,32 @@ button:disabled {
 .centerColumn,
 .tagPanel {
   min-width: 0;
+}
+
+.cExtensionButton {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid #b8d8e5;
+  border-radius: 10px;
+  background: #f2fbfd;
+  color: #215f76;
+  padding: 9px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.cExtensionButton small {
+  color: #607487;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cExtensionButton:hover {
+  background: #e8f6fa;
+  border-color: #86bfd4;
 }
 
 .stageRail {

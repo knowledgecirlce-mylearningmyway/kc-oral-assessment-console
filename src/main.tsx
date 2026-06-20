@@ -3,14 +3,17 @@ import ReactDOM from "react-dom/client";
 import { Clipboard, Clock, HelpCircle, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import "./styles.css";
 
+type FrameworkId = "cefr-ccc" | "pfl2-sle";
 type CEFRLevel = "A1" | "A2" | "B1" | "B1+" | "B2" | "B2+" | "C1" | "C1+" | "C2";
+type SLELevel = "Inférieur à B" | "B-" | "B" | "B+" | "C-" | "C" | "C+";
+type AssessmentLevel = CEFRLevel | SLELevel;
 
 interface CandidateInfo {
   fullName: string;
   email: string;
-  client: "CCC";
-  assessmentLanguage: "Français";
-  assessmentType: "Interaction orale";
+  client: string;
+  assessmentLanguage: string;
+  assessmentType: string;
   assessmentDate: string;
   evaluatorName: string;
   mode: "Microsoft Teams";
@@ -20,13 +23,16 @@ interface CandidateInfo {
 }
 
 interface CriterionRating {
-  fluency: CEFRLevel | "";
-  interaction: CEFRLevel | "";
-  grammar: CEFRLevel | "";
-  vocabulary: CEFRLevel | "";
-  coherence: CEFRLevel | "";
-  pronunciation: CEFRLevel | "";
-  finalLevel: CEFRLevel | "";
+  comprehensionQuestions: AssessmentLevel | "";
+  fluency: AssessmentLevel | "";
+  interaction: AssessmentLevel | "";
+  grammar: AssessmentLevel | "";
+  vocabulary: AssessmentLevel | "";
+  coherence: AssessmentLevel | "";
+  pronunciation: AssessmentLevel | "";
+  justification: AssessmentLevel | "";
+  abstraction: AssessmentLevel | "";
+  finalLevel: AssessmentLevel | "";
 }
 
 interface AssessmentNotes {
@@ -40,11 +46,13 @@ interface AssessmentNotes {
 
 interface OralAssessmentSession {
   id: string;
+  frameworkId: FrameworkId;
   candidate: CandidateInfo;
   ratings: CriterionRating;
   notes: AssessmentNotes;
   selectedStage: string;
   summary: string;
+  cExtensionEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,7 +78,7 @@ type ActiveTagEvidence = {
   state: Exclude<TagState, "inactive">;
 };
 type CriterionSuggestion = {
-  level: CEFRLevel | "";
+  level: AssessmentLevel | "";
   confidence: "low" | "medium" | "high";
   reasons: string[];
 };
@@ -97,6 +105,7 @@ type Stage = {
   label: string;
   title: string;
   time: string;
+  optional?: boolean;
   purpose: string[];
   main: string[];
   followUps?: string[];
@@ -123,6 +132,42 @@ type NoteField = {
   placeholder: string;
   mode: NoteMode;
   helper: string;
+};
+
+type FrameworkConfig = {
+  id: FrameworkId;
+  selectorLabel: string;
+  modeLabel: string;
+  appTitle: string;
+  defaultClient: string;
+  ratingTitle: string;
+  ratingAriaLabel: string;
+  ratingHelp: string;
+  finalProfileLabel: string;
+  summaryTitle: string;
+  summaryButtonLabel: string;
+  summaryPlaceholder: string;
+  summaryReportTarget: string;
+  unconfirmedLevelNote: string;
+  disclaimer?: string;
+  levels: AssessmentLevel[];
+  levelValues: Record<string, number>;
+  criteria: { key: CriterionKey; label: string }[];
+  descriptors: Record<CriterionKey, Partial<Record<AssessmentLevel, string>>>;
+  reportTemplates: Partial<Record<AssessmentLevel, string>>;
+  levelProfileLines: Partial<Record<AssessmentLevel, string>>;
+  recommendationTemplates: Record<string, string[]>;
+  stages: Stage[];
+  quickTagGroups: QuickTagGroup[];
+  frequentTagValues: string[];
+  tagLabels: Record<string, string>;
+  tagSuggestionRules: SuggestionRule[];
+  performanceSuggestionRules: Record<
+    PerformanceKey,
+    Partial<Record<PerformanceValue, { criteria: CriterionKey[]; score: number; reason: string }>>
+  >;
+  cProbeQuestions: CProbe[];
+  guideSteps: string[];
 };
 
 const STORAGE_KEY = "kc-oral-assessment-console-draft";
@@ -540,7 +585,7 @@ const cProbeQuestions: CProbe[] = [
   },
 ];
 
-const levelValues: Record<CEFRLevel, number> = {
+const levelValues: Record<string, number> = {
   A1: 1,
   A2: 2,
   B1: 3,
@@ -561,7 +606,7 @@ const criteria: { key: CriterionKey; label: string }[] = [
   { key: "pronunciation", label: "Prononciation / intelligibilité" },
 ];
 
-const descriptors: Record<CriterionKey, Record<CEFRLevel, string>> = {
+const descriptors: Record<string, Record<CEFRLevel, string>> = {
   fluency: {
     A1: "Peut produire des mots, expressions mémorisées ou phrases très courtes. Les pauses sont très fréquentes.",
     A2: "Le discours est lent, fragmenté et dépend de pauses fréquentes.",
@@ -953,7 +998,7 @@ const stages: Stage[] = [
     ],
     main: [
       "Vérifier si le niveau suggéré correspond à la performance observée en direct.",
-      "Confirmer que le niveau final repose sur la performance orale observée, et non sur une conversion mécanique PFL2/ELS.",
+      "Confirmer que le niveau final repose sur la performance orale observée, et non sur une conversion mécanique depuis un autre cadre.",
       "Générer le résumé CECR/CEFR et modifier le texte avant de le copier dans le rapport CCC.",
     ],
     focus: [
@@ -1328,15 +1373,611 @@ const noteFields: NoteField[] = [
   },
 ];
 
-function createSession(): OralAssessmentSession {
+const sleLevels: SLELevel[] = ["Inférieur à B", "B-", "B", "B+", "C-", "C", "C+"];
+
+const sleLevelValues: Record<string, number> = {
+  "Inférieur à B": 2,
+  "B-": 2.7,
+  B: 3.4,
+  "B+": 4.1,
+  "C-": 4.7,
+  C: 5.25,
+  "C+": 5.8,
+};
+
+const sleCriteria: { key: CriterionKey; label: string }[] = [
+  { key: "comprehensionQuestions", label: "Compréhension des questions" },
+  { key: "fluency", label: "Fluidité" },
+  { key: "grammar", label: "Précision grammaticale" },
+  { key: "vocabulary", label: "Vocabulaire" },
+  { key: "coherence", label: "Organisation du discours" },
+  { key: "interaction", label: "Interaction / autonomie" },
+  { key: "justification", label: "Capacité à justifier" },
+  { key: "abstraction", label: "Capacité à traiter des questions abstraites" },
+];
+
+const sleLevelDescriptors: Record<SLELevel, string> = {
+  "Inférieur à B":
+    "Réponses limitées et souvent courtes. La personne candidate dépend fortement des relances; les erreurs peuvent nuire à la compréhension.",
+  "B-":
+    "Profil proche du niveau B, mais fragile. La communication est possible sur des sujets familiers avec hésitations, vocabulaire limité et soutien fréquent.",
+  B:
+    "Communication fonctionnelle sur des sujets professionnels familiers. Peut décrire, expliquer simplement et répondre à des relances prévisibles.",
+  "B+":
+    "Niveau B solide. Peut développer davantage ses idées, justifier certaines opinions et maintenir l'échange avec une autonomie croissante.",
+  "C-":
+    "Profil proche du niveau C, mais encore instable. Peut traiter des sujets plus complexes, avec des limites de précision, structure ou spontanéité.",
+  C:
+    "Communication aisée et efficace dans des situations professionnelles variées. Peut expliquer, comparer, justifier, nuancer et soutenir une discussion complexe.",
+  "C+":
+    "Performance supérieure au niveau C attendu, avec grande aisance, précision et nuance sur des sujets complexes ou abstraits.",
+};
+
+const sleDescriptors: FrameworkConfig["descriptors"] = {
+  comprehensionQuestions: sleLevelDescriptors,
+  fluency: sleLevelDescriptors,
+  grammar: sleLevelDescriptors,
+  vocabulary: sleLevelDescriptors,
+  coherence: sleLevelDescriptors,
+  interaction: sleLevelDescriptors,
+  justification: sleLevelDescriptors,
+  abstraction: sleLevelDescriptors,
+  pronunciation: {},
+};
+
+const sleReportTemplates: Partial<Record<AssessmentLevel, string>> = {
+  "Inférieur à B":
+    "La personne candidate peut répondre à certaines questions simples, mais la communication reste limitée. Les réponses sont souvent courtes, dépendantes des relances, et les erreurs nuisent parfois à la compréhension.",
+  "B-":
+    "La personne candidate approche le niveau B, mais la performance demeure fragile. Elle peut communiquer sur des sujets familiers, avec des hésitations, des limites de vocabulaire et un besoin fréquent de soutien.",
+  B:
+    "La personne candidate peut communiquer de façon fonctionnelle sur des sujets professionnels familiers. Elle peut décrire, expliquer simplement et répondre à des questions de suivi prévisibles. Les erreurs sont présentes, mais le message principal demeure compréhensible.",
+  "B+":
+    "La personne candidate démontre un niveau B solide et s'approche parfois du niveau C. Elle peut développer davantage ses idées, justifier certaines opinions et maintenir l'échange avec une autonomie croissante, mais la complexité et la nuance demeurent limitées.",
+  "C-":
+    "La personne candidate approche le niveau C, mais la performance n'est pas encore stable. Elle peut traiter des sujets plus complexes et donner des opinions, mais manque parfois de précision, de structure ou de spontanéité dans les réponses plus abstraites.",
+  C:
+    "La personne candidate peut communiquer avec aisance et efficacité dans des situations professionnelles variées. Elle peut expliquer, comparer, justifier, nuancer et soutenir une discussion sur des sujets complexes avec un bon degré d'autonomie.",
+  "C+":
+    "La personne candidate démontre une performance supérieure au niveau C attendu. Elle communique avec grande aisance, précision et nuance, même sur des sujets complexes ou abstraits. Les erreurs sont rares et ne nuisent pas à la communication.",
+};
+
+const sleRecommendationTemplates: Record<string, string[]> = {
+  "Inférieur à B/B-": [
+    "Renforcer les bases de l'interaction orale professionnelle : comprendre les questions, répondre avec des phrases complètes et demander une clarification.",
+    "Développer le vocabulaire lié au poste, aux responsabilités et aux situations de travail courantes.",
+    "Pratiquer la narration simple au passé et l'explication d'étapes professionnelles familières.",
+  ],
+  "B/B+": [
+    "Consolider la communication fonctionnelle sur des sujets professionnels familiers.",
+    "Renforcer la précision grammaticale, l'organisation du discours et les réponses aux relances imprévues.",
+    "Développer la justification, la comparaison d'options et l'expression d'opinions avec exemples.",
+  ],
+  "C-/C/C+": [
+    "Maintenir une pratique orale avancée au moyen de discussions professionnelles complexes.",
+    "Raffiner la nuance, l'expression idiomatique, le registre et la précision lexicale.",
+    "Pratiquer l'argumentation de haut niveau, la diplomatie et la communication de niveau exécutif.",
+  ],
+};
+
+const sleStages: Stage[] = [
+  {
+    id: "sle-role",
+    label: "Étape 1",
+    title: "Mise en confiance / rôle professionnel",
+    time: "3-4 min",
+    purpose: [
+      "mettre la personne candidate à l'aise",
+      "confirmer sa capacité à parler de son rôle",
+      "observer la spontanéité de base",
+    ],
+    main: [
+      "Pouvez-vous vous présenter brièvement ?",
+      "Quel est votre rôle actuel ?",
+      "Quelles sont vos principales responsabilités ?",
+      "Depuis combien de temps occupez-vous ce poste ?",
+      "Dans quelles situations devez-vous communiquer en français au travail ?",
+    ],
+    easier: [
+      "Où travaillez-vous actuellement ?",
+      "Quelles tâches faites-vous le plus souvent ?",
+      "Travaillez-vous plutôt seul ou en équipe ?",
+    ],
+    advanced: [
+      "Comment votre rôle a-t-il évolué récemment ?",
+      "Quelles responsabilités exigent le plus de communication ?",
+      "Comment adaptez-vous votre communication selon votre interlocuteur ?",
+    ],
+    focus: ["capacité à se présenter", "description du rôle", "vocabulaire professionnel", "fluidité", "autonomie dans les réponses"],
+  },
+  {
+    id: "sle-narration",
+    label: "Étape 2",
+    title: "Expérience passée / narration",
+    time: "5-6 min",
+    purpose: [
+      "évaluer la capacité à raconter une expérience passée",
+      "organiser les événements",
+      "utiliser les temps du passé",
+    ],
+    main: [
+      "Parlez-moi d'un projet récent auquel vous avez participé.",
+      "Décrivez une situation où vous avez dû respecter une échéance importante.",
+      "Racontez une difficulté que vous avez rencontrée au travail et expliquez ce que vous avez fait.",
+      "Parlez-moi d'une réunion ou d'une situation professionnelle importante.",
+    ],
+    followUps: [
+      "Quand cela s'est-il passé ?",
+      "Quel était votre rôle ?",
+      "Quelles étapes avez-vous suivies ?",
+      "Quel a été le résultat ?",
+      "Qu'auriez-vous fait différemment ?",
+    ],
+    easier: ["Décrivez simplement ce qui s'est passé.", "Qu'avez-vous fait en premier ?", "Quel a été le résultat ?"],
+    advanced: [
+      "Quelles leçons avez-vous tirées de cette situation ?",
+      "Comment cette expérience a-t-elle influencé votre façon de travailler ?",
+      "Quelles conséquences cette situation a-t-elle eues pour votre équipe ?",
+    ],
+    focus: [
+      "utilisation du passé composé / imparfait",
+      "capacité à raconter",
+      "ordre chronologique",
+      "précision des détails",
+      "réflexion sur l'expérience",
+    ],
+  },
+  {
+    id: "sle-process",
+    label: "Étape 3",
+    title: "Explication d'un processus",
+    time: "5-7 min",
+    purpose: ["évaluer la capacité à expliquer clairement une procédure ou une décision professionnelle"],
+    main: [
+      "Expliquez comment vous préparez un dossier, un rapport ou une note pour votre gestionnaire.",
+      "Expliquez comment vous organisez vos priorités lorsqu'il y a plusieurs demandes urgentes.",
+      "Décrivez comment une décision est prise dans votre équipe.",
+      "Expliquez comment vous traitez une demande urgente.",
+    ],
+    followUps: [
+      "Quelles sont les étapes principales ?",
+      "Qui doit être consulté ?",
+      "Quels documents sont nécessaires ?",
+      "Comment vérifiez-vous que le travail est complet ?",
+      "Que faites-vous si des informations sont manquantes ?",
+    ],
+    easier: ["Que faites-vous en premier ?", "Que faites-vous ensuite ?", "Qui contactez-vous ?"],
+    advanced: [
+      "Comment ce processus pourrait-il être amélioré ?",
+      "Quels risques peuvent survenir ?",
+      "Comment adapteriez-vous ce processus dans un contexte plus urgent ?",
+      "Comment expliqueriez-vous ce processus à une personne qui ne connaît pas votre domaine ?",
+    ],
+    focus: ["organisation", "connecteurs", "clarté", "précision", "vocabulaire professionnel", "cause et conséquence"],
+  },
+  {
+    id: "sle-compare",
+    label: "Étape 4",
+    title: "Comparaison de deux options",
+    time: "5-7 min",
+    purpose: ["évaluer la capacité à comparer, nuancer et recommander une option"],
+    main: [
+      "Votre équipe hésite entre deux solutions pour respecter une échéance. Comparez-les et recommandez la meilleure.",
+      "Comparez les avantages d'une réunion virtuelle et d'une réunion en personne.",
+      "Comparez deux façons d'améliorer la collaboration dans une équipe.",
+      "Comparez deux méthodes pour communiquer une décision importante.",
+    ],
+    followUps: [
+      "Quels sont les avantages de chaque option ?",
+      "Quels sont les désavantages ?",
+      "Quelle option est la plus réaliste ?",
+      "Quels seraient les risques ?",
+      "Quelle option recommandez-vous et pourquoi ?",
+    ],
+    easier: ["Quelle option préférez-vous ?", "Quels sont les avantages ?", "Quels sont les problèmes possibles ?"],
+    advanced: [
+      "Comment votre recommandation changerait-elle si les délais étaient très courts ?",
+      "Comment tiendriez-vous compte des contraintes budgétaires ?",
+      "Comment présenteriez-vous cette recommandation à la haute direction ?",
+      "Quels compromis seraient nécessaires ?",
+    ],
+    focus: ["comparaison", "justification", "nuance", "connecteurs d'opposition", "capacité à recommander"],
+  },
+  {
+    id: "sle-opinion",
+    label: "Étape 5",
+    title: "Opinion et justification",
+    time: "5-7 min",
+    purpose: ["évaluer la capacité à exprimer une opinion, la défendre et répondre à des questions de suivi"],
+    main: [
+      "Selon vous, quelles sont les qualités les plus importantes pour bien travailler en équipe ?",
+      "Pensez-vous que le télétravail améliore la productivité ? Pourquoi ?",
+      "Est-il préférable de communiquer une décision importante par écrit ou en réunion ?",
+      "Selon vous, comment peut-on améliorer la communication dans une organisation ?",
+      "Quelle est l'importance de la formation continue dans le milieu professionnel ?",
+    ],
+    followUps: [
+      "Pourquoi pensez-vous cela ?",
+      "Pouvez-vous donner un exemple ?",
+      "Quels sont les avantages et les limites ?",
+      "Que diriez-vous à une personne qui n'est pas d'accord ?",
+      "Votre opinion changerait-elle selon le contexte ?",
+    ],
+    easier: ["Êtes-vous d'accord ou non ?", "Pourquoi ?", "Pouvez-vous donner un exemple simple ?"],
+    advanced: [
+      "Quels seraient les impacts à long terme ?",
+      "Comment cette question touche-t-elle la gestion des ressources ?",
+      "Quelles nuances faut-il apporter ?",
+      "Comment défendriez-vous votre point de vue devant un comité ?",
+    ],
+    focus: ["opinion", "justification", "capacité à développer", "nuance", "spontanéité", "réaction aux objections"],
+  },
+  {
+    id: "sle-scenario",
+    label: "Étape 6",
+    title: "Scénario hypothétique professionnel",
+    time: "6-8 min",
+    purpose: [
+      "évaluer la capacité à réagir à une situation complexe",
+      "proposer des solutions",
+      "maintenir une interaction professionnelle",
+    ],
+    main: [
+      "Un partenaire ne peut pas respecter une échéance importante. Vous devez expliquer les conséquences possibles, clarifier la situation et proposer des solutions réalistes.",
+    ],
+    alternatives: [
+      "Un document important contient des erreurs et doit être corrigé rapidement.",
+      "Un client interne demande une réponse urgente, mais l'information n'est pas encore disponible.",
+      "Deux équipes ne s'entendent pas sur les prochaines étapes d'un projet.",
+      "Une réunion importante doit être reportée à la dernière minute.",
+      "Un nouveau processus crée de la confusion dans l'équipe.",
+    ],
+    followUps: [
+      "Quelle information devez-vous obtenir en premier ?",
+      "Qui devrait être informé ?",
+      "Comment expliqueriez-vous l'impact du retard ?",
+      "Quelles solutions proposeriez-vous ?",
+      "Comment limiteriez-vous les risques ?",
+      "Que feriez-vous si le partenaire ne répondait pas rapidement ?",
+    ],
+    easier: ["Que feriez-vous en premier ?", "Qui contacteriez-vous ?", "Comment expliqueriez-vous le problème ?"],
+    advanced: [
+      "Comment géreriez-vous cette situation si elle avait des implications politiques ou financières ?",
+      "Comment rédigeriez-vous un message diplomatique à un partenaire externe ?",
+      "Comment présenteriez-vous les risques à la haute direction ?",
+      "Comment maintiendriez-vous la relation avec le partenaire malgré le problème ?",
+    ],
+    focus: ["interaction spontanée", "résolution de problème", "ton professionnel", "diplomatie", "précision", "complexité"],
+  },
+  {
+    id: "sle-extension-c",
+    label: "Étape 7",
+    title: "Extension niveau C",
+    time: "5-8 min",
+    optional: true,
+    purpose: ["vérifier si la personne candidate dépasse le niveau B et peut soutenir une discussion de niveau C"],
+    main: [
+      "Quels sont les principaux défis liés à la transformation numérique dans les organisations publiques ?",
+      "Comment une organisation peut-elle maintenir la qualité des services tout en réduisant les coûts ?",
+      "Quel rôle la communication joue-t-elle dans la gestion du changement ?",
+      "Comment concilier rapidité, transparence et prudence dans la prise de décision ?",
+      "Quels sont les risques d'une mauvaise communication entre partenaires internes et externes ?",
+      "Comment les gestionnaires peuvent-ils soutenir l'innovation tout en respectant les règles administratives ?",
+      "Selon vous, quelles compétences seront essentielles dans la fonction publique de demain ?",
+    ],
+    followUps: [
+      "Pouvez-vous nuancer votre réponse ?",
+      "Quels seraient les effets à long terme ?",
+      "Y a-t-il des risques ou des limites ?",
+      "Comment cette question pourrait-elle être perçue par différents groupes ?",
+      "Pouvez-vous proposer une approche équilibrée ?",
+      "Comment défendriez-vous cette position devant des cadres supérieurs ?",
+    ],
+    focus: [
+      "pensée abstraite",
+      "nuance",
+      "argumentation",
+      "hypothèses",
+      "discussion complexe",
+      "précision",
+      "autonomie discursive",
+    ],
+  },
+];
+
+const sleQuickTagGroups: QuickTagGroup[] = [
+  {
+    title: "Observations générales",
+    description: "Profil global à réutiliser dans le rapport interne PFL2/SLE.",
+    target: "generalObservations",
+    prefix: "observation générale",
+    tone: "neutral",
+    view: "global",
+    tags: [
+      "communication fonctionnelle",
+      "bonne autonomie dans l'échange",
+      "performance inégale selon la tâche",
+      "réponses très courtes",
+      "soutien fréquent requis",
+      "répond mieux aux questions concrètes",
+      "difficulté avec les questions abstraites",
+      "compréhension généralement adéquate",
+      "compréhension limitée sans reformulation",
+      "aisance plus forte sur sujets familiers",
+    ],
+  },
+  {
+    title: "Points à améliorer - langue",
+    description: "À utiliser pour noter les limites de grammaire, vocabulaire ou précision.",
+    target: "preciseErrors",
+    prefix: "langue à améliorer",
+    tone: "challenge",
+    view: "improve",
+    tags: [
+      "temps verbaux instables",
+      "passé non maîtrisé",
+      "accords fréquents à corriger",
+      "structure de phrase fragile",
+      "vocabulaire limité",
+      "vocabulaire imprécis",
+      "cherche souvent ses mots",
+    ],
+  },
+  {
+    title: "Points à améliorer - discours et interaction",
+    description: "À utiliser pour les limites de structure, justification, autonomie ou abstraction.",
+    target: "challenges",
+    prefix: "discours et interaction",
+    tone: "challenge",
+    view: "improve",
+    tags: [
+      "organisation peu claire",
+      "connecteurs limités",
+      "justification faible",
+      "difficulté à comparer des options",
+      "besoin de relances fréquentes",
+      "spontanéité limitée",
+      "difficulté à répondre aux relances",
+      "difficulté à soutenir une position complexe",
+      "nuance limitée pour le niveau C",
+    ],
+  },
+  {
+    title: "Points forts - niveau B solide",
+    description: "À utiliser pour les preuves fonctionnelles et autonomes.",
+    target: "strengths",
+    prefix: "force PFL2/SLE",
+    tone: "strength",
+    view: "strengths",
+    tags: [
+      "structure claire",
+      "bonne fluidité",
+      "bonne interaction",
+      "exemples efficaces",
+      "recommandation solide",
+      "bonne clarification",
+      "ton approprié",
+      "bonne cohérence",
+      "a décrit une situation passée avec cohérence",
+    ],
+  },
+  {
+    title: "Preuves niveau C",
+    description: "À utiliser seulement si la personne candidate soutient une discussion complexe ou abstraite.",
+    target: "strengths",
+    prefix: "preuve niveau C",
+    tone: "strength",
+    view: "strengths",
+    tags: [
+      "argumentation nuancée",
+      "diplomatie sous pression",
+      "abstraction maîtrisée",
+      "vocabulaire spécialisé précis",
+      "registre adapté au niveau exécutif",
+    ],
+  },
+  {
+    title: "Exemples de performance forte",
+    description: "Formulations utiles pour illustrer le rapport interne.",
+    target: "strongPerformanceExamples",
+    prefix: "exemple fort",
+    tone: "strength",
+    view: "examples",
+    tags: [
+      "a expliqué clairement un processus",
+      "a donné un exemple concret pertinent",
+      "a comparé deux options de façon claire",
+      "a justifié une recommandation",
+      "a reformulé efficacement une idée",
+      "a clarifié une réponse après relance",
+      "a maintenu un ton professionnel",
+    ],
+  },
+];
+
+const sleFrequentTagValues = [
+  "communication fonctionnelle",
+  "réponses très courtes",
+  "soutien fréquent requis",
+  "compréhension limitée sans reformulation",
+  "temps verbaux instables",
+  "vocabulaire limité",
+  "bonne fluidité",
+  "bonne interaction",
+  "justification faible",
+  "difficulté avec les questions abstraites",
+  "argumentation nuancée",
+  "abstraction maîtrisée",
+];
+
+const sleTagSuggestionRules: SuggestionRule[] = [
+  { tag: "communication fonctionnelle", criteria: ["comprehensionQuestions", "fluency", "interaction"], score: 3.4, reason: "communication fonctionnelle" },
+  { tag: "réponses très courtes", criteria: ["fluency", "coherence"], score: 2.2, reason: "réponses très courtes" },
+  { tag: "soutien fréquent requis", criteria: ["comprehensionQuestions", "interaction"], score: 2.3, reason: "soutien fréquent requis" },
+  { tag: "compréhension limitée sans reformulation", criteria: ["comprehensionQuestions", "interaction"], score: 2.2, reason: "compréhension fragile" },
+  { tag: "temps verbaux instables", criteria: ["grammar"], score: 2.8, reason: "temps verbaux instables" },
+  { tag: "passé non maîtrisé", criteria: ["grammar", "coherence"], score: 2.4, reason: "narration au passé fragile" },
+  { tag: "vocabulaire limité", criteria: ["vocabulary"], score: 2.6, reason: "vocabulaire limité" },
+  { tag: "organisation peu claire", criteria: ["coherence"], score: 2.6, reason: "organisation peu claire" },
+  { tag: "justification faible", criteria: ["justification", "coherence"], score: 2.8, reason: "justification limitée" },
+  { tag: "difficulté avec les questions abstraites", criteria: ["abstraction", "justification"], score: 2.7, reason: "abstraction fragile" },
+  { tag: "bonne fluidité", criteria: ["fluency"], score: 4.2, reason: "bonne fluidité" },
+  { tag: "bonne interaction", criteria: ["interaction", "comprehensionQuestions"], score: 4.2, reason: "interaction autonome" },
+  { tag: "structure claire", criteria: ["coherence"], score: 4.1, reason: "structure claire" },
+  { tag: "recommandation solide", criteria: ["justification"], score: 4.2, reason: "recommandation solide" },
+  { tag: "a décrit une situation passée avec cohérence", criteria: ["coherence", "grammar"], score: 4.1, reason: "narration cohérente" },
+  { tag: "argumentation nuancée", criteria: ["justification", "abstraction"], score: 5.35, reason: "argumentation nuancée" },
+  { tag: "abstraction maîtrisée", criteria: ["abstraction", "coherence"], score: 5.45, reason: "abstraction maîtrisée" },
+  { tag: "vocabulaire spécialisé précis", criteria: ["vocabulary", "abstraction"], score: 5.3, reason: "vocabulaire spécialisé" },
+  { tag: "registre adapté au niveau exécutif", criteria: ["interaction", "justification"], score: 5.35, reason: "registre exécutif" },
+  { tag: "difficulté à soutenir une position complexe", criteria: ["justification", "abstraction"], score: 3.1, reason: "position complexe fragile" },
+  { tag: "nuance limitée pour le niveau C", criteria: ["abstraction", "justification"], score: 3.7, reason: "nuance limitée pour C" },
+];
+
+const slePerformanceSuggestionRules: FrameworkConfig["performanceSuggestionRules"] = {
+  comprehension: {
+    1: { criteria: ["comprehensionQuestions", "interaction"], score: 2.2, reason: "compréhension fragile" },
+    2: { criteria: ["comprehensionQuestions", "interaction"], score: 3.4, reason: "compréhension fonctionnelle" },
+    3: { criteria: ["comprehensionQuestions", "interaction"], score: 4.3, reason: "compréhension solide" },
+  },
+  autonomy: {
+    1: { criteria: ["interaction", "fluency"], score: 2.3, reason: "autonomie fragile" },
+    2: { criteria: ["interaction", "fluency"], score: 3.5, reason: "autonomie fonctionnelle" },
+    3: { criteria: ["interaction", "fluency"], score: 4.4, reason: "autonomie solide" },
+  },
+  complexity: {
+    1: { criteria: ["coherence", "vocabulary", "abstraction"], score: 2.7, reason: "complexité limitée" },
+    2: { criteria: ["coherence", "vocabulary", "abstraction"], score: 3.6, reason: "complexité fonctionnelle" },
+    3: { criteria: ["coherence", "vocabulary", "abstraction"], score: 5.0, reason: "complexité soutenue" },
+  },
+  precision: {
+    1: { criteria: ["grammar", "vocabulary"], score: 2.5, reason: "précision fragile" },
+    2: { criteria: ["grammar", "vocabulary"], score: 3.5, reason: "précision fonctionnelle" },
+    3: { criteria: ["grammar", "vocabulary"], score: 4.5, reason: "précision solide" },
+  },
+};
+
+const CEFR_CCC_CONFIG: FrameworkConfig = {
+  id: "cefr-ccc",
+  selectorLabel: "CCC – CECR/CEFR",
+  modeLabel: "CCC – CECR/CEFR",
+  appTitle: "Console d'évaluation orale KC - CCC CECR/CEFR",
+  defaultClient: "CCC",
+  ratingTitle: "Grille d'évaluation CECR / CEFR",
+  ratingAriaLabel: "Grille d'évaluation CECR CEFR",
+  ratingHelp:
+    "Les suggestions sont générées localement à partir des tags rapides et du fil conducteur. Elles doivent être confirmées ou modifiées par l'évaluateur.",
+  finalProfileLabel: "Profil d'interaction orale CECR/CEFR",
+  summaryTitle: "Résumé CECR/CEFR généré",
+  summaryButtonLabel: "Générer le résumé CECR",
+  summaryPlaceholder: "Générez un résumé CECR/CEFR prêt pour le rapport après avoir sélectionné les cotes et ajouté des notes.",
+  summaryReportTarget: "rapport d'évaluation CCC",
+  unconfirmedLevelNote: "Lecture du niveau à confirmer après la sélection des critères CECR/CEFR.",
+  levels,
+  levelValues,
+  criteria,
+  descriptors: descriptors as FrameworkConfig["descriptors"],
+  reportTemplates,
+  levelProfileLines,
+  recommendationTemplates,
+  stages,
+  quickTagGroups,
+  frequentTagValues,
+  tagLabels,
+  tagSuggestionRules,
+  performanceSuggestionRules,
+  cProbeQuestions,
+  guideSteps: evaluatorGuideSteps,
+};
+
+const PFL2_SLE_CONFIG: FrameworkConfig = {
+  id: "pfl2-sle",
+  selectorLabel: "PFL2 / SLE – B-C",
+  modeLabel: "PFL2 / SLE – B-C",
+  appTitle: "Console d'évaluation orale KC - PFL2/SLE B-C",
+  defaultClient: "PFL2 / SLE",
+  ratingTitle: "Grille d'évaluation PFL2 / SLE",
+  ratingAriaLabel: "Grille d'évaluation PFL2 SLE",
+  ratingHelp:
+    "Suggestion basée sur les observations sélectionnées. Le niveau final doit être confirmé par l'évaluateur ou l'évaluatrice.",
+  finalProfileLabel: "Profil oral estimé PFL2 / SLE",
+  summaryTitle: "Résumé PFL2 / SLE généré",
+  summaryButtonLabel: "Générer le résumé PFL2/SLE",
+  summaryPlaceholder: "Générez un résumé PFL2/SLE prêt pour le rapport interne après avoir sélectionné les cotes et ajouté des notes.",
+  summaryReportTarget: "rapport interne PFL2/SLE",
+  unconfirmedLevelNote: "Lecture du niveau à confirmer après la sélection des critères PFL2/SLE.",
+  disclaimer:
+    "Ce profil est une estimation interne et ne constitue pas un résultat officiel de la Commission de la fonction publique.",
+  levels: sleLevels,
+  levelValues: sleLevelValues,
+  criteria: sleCriteria,
+  descriptors: sleDescriptors,
+  reportTemplates: sleReportTemplates,
+  levelProfileLines: sleReportTemplates,
+  recommendationTemplates: sleRecommendationTemplates,
+  stages: sleStages,
+  quickTagGroups: sleQuickTagGroups,
+  frequentTagValues: sleFrequentTagValues,
+  tagLabels: { ...tagLabels },
+  tagSuggestionRules: sleTagSuggestionRules,
+  performanceSuggestionRules: slePerformanceSuggestionRules,
+  cProbeQuestions: [],
+  guideSteps: [
+    "Choisir le mode PFL2 / SLE – B-C dans l'en-tête avant de commencer.",
+    "Entrer les renseignements de départ, puis passer en mode évaluation.",
+    "Utiliser les étapes 1 à 6 pour recueillir les preuves du niveau B ou C.",
+    "Activer l'extension niveau C seulement si la personne candidate montre des preuves solides au-dessus de B.",
+    "Après le départ de la personne candidate, cliquer sur Finaliser, confirmer ou modifier les niveaux PFL2/SLE.",
+    "Choisir ou adapter une formulation dans la banque, puis générer le résumé interne.",
+  ],
+};
+
+const frameworkConfigs: Record<FrameworkId, FrameworkConfig> = {
+  "cefr-ccc": CEFR_CCC_CONFIG,
+  "pfl2-sle": PFL2_SLE_CONFIG,
+};
+
+function createEmptyRatings(): CriterionRating {
+  return {
+    comprehensionQuestions: "",
+    fluency: "",
+    interaction: "",
+    grammar: "",
+    vocabulary: "",
+    coherence: "",
+    pronunciation: "",
+    justification: "",
+    abstraction: "",
+    finalLevel: "",
+  };
+}
+
+function createEmptyNotes(): AssessmentNotes {
+  return {
+    generalObservations: "",
+    strengths: "",
+    challenges: "",
+    preciseErrors: "",
+    strongPerformanceExamples: "",
+    finalJudgment: "",
+  };
+}
+
+function getFrameworkStages(config: FrameworkConfig, cExtensionEnabled = false) {
+  return config.stages.filter((stage) => !stage.optional || cExtensionEnabled);
+}
+
+function createSession(frameworkId: FrameworkId = "cefr-ccc"): OralAssessmentSession {
   const now = new Date().toISOString();
+  const config = frameworkConfigs[frameworkId];
 
   return {
     id: crypto.randomUUID(),
+    frameworkId,
     candidate: {
       fullName: "",
       email: "",
-      client: "CCC",
+      client: config.defaultClient,
       assessmentLanguage: "Français",
       assessmentType: "Interaction orale",
       assessmentDate: new Date().toISOString().slice(0, 10),
@@ -1346,25 +1987,11 @@ function createSession(): OralAssessmentSession {
       targetLevel: "",
       preAssessmentNotes: "",
     },
-    ratings: {
-      fluency: "",
-      interaction: "",
-      grammar: "",
-      vocabulary: "",
-      coherence: "",
-      pronunciation: "",
-      finalLevel: "",
-    },
-    notes: {
-      generalObservations: "",
-      strengths: "",
-      challenges: "",
-      preciseErrors: "",
-      strongPerformanceExamples: "",
-      finalJudgment: "",
-    },
-    selectedStage: stages[0].id,
+    ratings: createEmptyRatings(),
+    notes: createEmptyNotes(),
+    selectedStage: config.stages[0].id,
     summary: "",
+    cExtensionEnabled: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -1379,18 +2006,18 @@ function getTagText(group: QuickTagGroup, tag: string, state: Exclude<TagState, 
   return state === "strong" ? `${base} (fortement observé)` : base;
 }
 
-function getTagLabel(tag: string) {
-  return tagLabels[tag] ?? tag;
+function getTagLabel(tag: string, config: FrameworkConfig) {
+  return config.tagLabels[tag] ?? tag;
 }
 
-function getTagGroupsForView(view: TagView) {
-  return view === "frequent" ? [] : quickTagGroups.filter((group) => group.view === view);
+function getTagGroupsForView(view: TagView, config: FrameworkConfig) {
+  return view === "frequent" ? [] : config.quickTagGroups.filter((group) => group.view === view);
 }
 
-function getFrequentTagActions() {
-  return frequentTagValues
+function getFrequentTagActions(config: FrameworkConfig) {
+  return config.frequentTagValues
     .map((value) => {
-      const group = quickTagGroups.find((candidate) => candidate.tags.includes(value));
+      const group = config.quickTagGroups.find((candidate) => candidate.tags.includes(value));
       return group ? { group, tag: value } : null;
     })
     .filter((item): item is { group: QuickTagGroup; tag: string } => Boolean(item));
@@ -1415,7 +2042,7 @@ function App() {
   const [candidatePanelOpen, setCandidatePanelOpen] = React.useState(true);
   const [assessmentStarted, setAssessmentStarted] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<ViewMode>("live");
-  const [lastLiveStage, setLastLiveStage] = React.useState(stages[0].id);
+  const [lastLiveStage, setLastLiveStage] = React.useState(CEFR_CCC_CONFIG.stages[0].id);
   const [tagView, setTagView] = React.useState<TagView>("frequent");
   const [performance, setPerformance] = React.useState<Record<PerformanceKey, PerformanceValue>>({
     comprehension: 0,
@@ -1437,17 +2064,23 @@ function App() {
     return () => window.clearInterval(timer);
   }, [session.createdAt]);
 
-  const selectedStage = stages.find((stage) => stage.id === session.selectedStage) ?? stages[0];
+  const activeFramework = frameworkConfigs[session.frameworkId ?? "cefr-ccc"];
+  const activeStages = getFrameworkStages(activeFramework, session.cExtensionEnabled);
+  const activeCriteria = activeFramework.criteria;
+  const activeLevels = activeFramework.levels;
+  const activeQuickTagGroups = activeFramework.quickTagGroups;
+  const selectedStage = activeStages.find((stage) => stage.id === session.selectedStage) ?? activeStages[0];
   const activeTagEvidence = getActiveTagEvidence();
-  const criterionSuggestions = getCriterionSuggestions(activeTagEvidence, performance);
-  const ratingSuggestedLevel = getSuggestedLevel(session.ratings);
-  const evidenceSuggestedLevel = getSuggestedLevelFromSuggestions(criterionSuggestions);
+  const criterionSuggestions = getCriterionSuggestions(activeTagEvidence, performance, activeFramework);
+  const ratingSuggestedLevel = getSuggestedLevel(session.ratings, activeFramework);
+  const evidenceSuggestedLevel = getSuggestedLevelFromSuggestions(criterionSuggestions, activeFramework);
   const suggestedLevel = ratingSuggestedLevel || evidenceSuggestedLevel;
   const finalLevel = session.ratings.finalLevel || suggestedLevel || "";
   const tagStats = getTagStats();
-  const shouldPromptCProbe = shouldShowCProbe(suggestedLevel, session.ratings, tagStats, performance);
-  const coherenceAlert = getCoherenceAlert(finalLevel, suggestedLevel, tagStats);
-  const judgmentPhraseOptions = getJudgmentPhraseOptions(finalLevel, activeTagEvidence, performance, tagStats);
+  const shouldPromptCProbe =
+    activeFramework.id === "cefr-ccc" && shouldShowCProbe(suggestedLevel, session.ratings, tagStats, performance, activeFramework);
+  const coherenceAlert = getCoherenceAlert(finalLevel, suggestedLevel, tagStats, activeFramework);
+  const judgmentPhraseOptions = getJudgmentPhraseOptions(finalLevel, activeTagEvidence, performance, tagStats, activeFramework);
   const hasFinalJudgment = Boolean(session.notes.finalJudgment.trim());
   const hasValidatedFinalLevel = Boolean(session.ratings.finalLevel);
   const structuredNoteFields = noteFields.filter((field) => field.key !== "finalJudgment");
@@ -1534,7 +2167,7 @@ function App() {
   }
 
   function getTagStats(): TagStats {
-    return quickTagGroups.reduce(
+    return activeQuickTagGroups.reduce(
       (stats, group) => {
         group.tags.forEach((tag) => {
           const state = getTagState(group, tag);
@@ -1558,7 +2191,7 @@ function App() {
   }
 
   function getActiveTagEvidence(): ActiveTagEvidence[] {
-    return quickTagGroups.flatMap((group) =>
+    return activeQuickTagGroups.flatMap((group) =>
       group.tags.flatMap((tag) => {
         const state = getTagState(group, tag);
 
@@ -1567,12 +2200,12 @@ function App() {
     );
   }
 
-  const selectedTagCount = quickTagGroups.reduce(
+  const selectedTagCount = activeQuickTagGroups.reduce(
     (count, group) => count + group.tags.filter((tag) => isTagActive(group, tag)).length,
     0,
   );
-  const frequentTagActions = getFrequentTagActions();
-  const visibleTagGroups = getTagGroupsForView(tagView).filter(
+  const frequentTagActions = getFrequentTagActions(activeFramework);
+  const visibleTagGroups = getTagGroupsForView(tagView, activeFramework).filter(
     (group) => shouldPromptCProbe || !group.title.toLowerCase().includes("approfondissement c"),
   );
 
@@ -1592,11 +2225,14 @@ function App() {
     }
 
     try {
-      const parsed = JSON.parse(rawDraft) as OralAssessmentSession;
-      const selectedStage = stages.some((stage) => stage.id === parsed.selectedStage)
-        ? parsed.selectedStage
-        : stages[0].id;
-      setSession({ ...parsed, selectedStage });
+      const parsed = JSON.parse(rawDraft) as Partial<OralAssessmentSession>;
+      const normalized = normalizeSession(parsed);
+      const normalizedFramework = frameworkConfigs[normalized.frameworkId];
+      const normalizedStages = getFrameworkStages(normalizedFramework, normalized.cExtensionEnabled);
+      const selectedStage = normalizedStages.some((stage) => stage.id === normalized.selectedStage)
+        ? normalized.selectedStage
+        : normalizedStages[0].id;
+      setSession({ ...normalized, selectedStage });
       setCandidatePanelOpen(false);
       setAssessmentStarted(true);
       setViewMode("live");
@@ -1616,7 +2252,7 @@ function App() {
     }
 
     localStorage.removeItem(STORAGE_KEY);
-    setSession(createSession());
+    setSession(createSession(session.frameworkId));
     setCandidatePanelOpen(true);
     setAssessmentStarted(false);
     setViewMode("live");
@@ -1637,13 +2273,13 @@ function App() {
     }
 
     const level = finalLevel || "[Niveau final à confirmer]";
-    const confirmedLevel = isCEFRLevel(level) ? level : "";
+    const confirmedLevel = isFrameworkLevel(level, activeFramework) ? level : "";
     const comments =
       confirmedLevel
-        ? reportTemplates[confirmedLevel]
+        ? activeFramework.reportTemplates[confirmedLevel] ?? ""
         : "La personne candidate peut gérer des échanges oraux simples et familiers en français, avec soutien. La performance doit être interprétée avec prudence si les preuves observées sont limitées.";
-    const recommendations = getRecommendations(confirmedLevel).map((item) => `- ${item}`).join("\n");
-    const criterionLines = criteria
+    const recommendations = getRecommendations(confirmedLevel, activeFramework).map((item) => `- ${item}`).join("\n");
+    const criterionLines = activeCriteria
       .map(({ key, label }) => `- ${label} : ${session.ratings[key] || "[non sélectionné]"}`)
       .join("\n");
     const performanceLines = performanceSignals
@@ -1654,11 +2290,12 @@ function App() {
       ? `\nFil conducteur observé pendant l'entretien :\n${performanceLines}\n`
       : "";
     const levelProfile = confirmedLevel
-      ? levelProfileLines[confirmedLevel]
-      : "Lecture du niveau à confirmer après la sélection des critères CECR/CEFR.";
+      ? activeFramework.levelProfileLines[confirmedLevel] ?? ""
+      : activeFramework.unconfirmedLevelNote;
     const coherenceLine = coherenceAlert
       ? `\nPoint de cohérence à vérifier :\n${coherenceAlert}\n`
       : "";
+    const disclaimerLine = activeFramework.disclaimer ? `\nNote importante :\n${activeFramework.disclaimer}\n` : "";
 
     const generated = `Personne candidate :
 ${session.candidate.fullName || "[Nom complet de la personne candidate]"}
@@ -1678,8 +2315,9 @@ ${session.candidate.client}
 Évaluateur / évaluatrice :
 ${session.candidate.evaluatorName || "[Nom de l'évaluateur ou de l'évaluatrice]"}
 
-Profil d'interaction orale CECR/CEFR :
+${activeFramework.finalProfileLabel} :
 ${level}
+${disclaimerLine}
 
 Lecture calibrée du niveau :
 ${levelProfile}
@@ -1723,8 +2361,22 @@ ${recommendations}`;
       return;
     }
 
-    await navigator.clipboard.writeText(session.summary);
-    setCopyStatus("Résumé copié dans le presse-papiers.");
+    try {
+      await navigator.clipboard.writeText(session.summary);
+      setCopyStatus("Résumé copié dans le presse-papiers.");
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = session.summary;
+      textarea.setAttribute("readonly", "true");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopyStatus(copied ? "Résumé copié dans le presse-papiers." : "Copie bloquée par le navigateur.");
+    }
+
     window.setTimeout(() => setCopyStatus(""), 1800);
   }
 
@@ -1734,7 +2386,7 @@ ${recommendations}`;
     setViewMode("live");
     setSession((current) => ({
       ...current,
-      selectedStage: current.selectedStage || stages[0].id,
+      selectedStage: current.selectedStage || activeStages[0].id,
       updatedAt: new Date().toISOString(),
     }));
   }
@@ -1803,7 +2455,7 @@ ${recommendations}`;
     setSession((current) => {
       const nextRatings = { ...current.ratings };
 
-      criteria.forEach(({ key }) => {
+      activeCriteria.forEach(({ key }) => {
         const suggestion = criterionSuggestions[key];
 
         if (suggestion.level) {
@@ -1828,7 +2480,7 @@ ${recommendations}`;
     scrollAfterFinalLevelSelection(suggestedLevel);
   }
 
-  function handleFinalLevelChange(value: CEFRLevel | "") {
+  function handleFinalLevelChange(value: AssessmentLevel | "") {
     updateRating("finalLevel", value);
 
     if (value) {
@@ -1836,14 +2488,124 @@ ${recommendations}`;
     }
   }
 
-  function scrollAfterFinalLevelSelection(level: CEFRLevel) {
-    const nextCoherenceAlert = getCoherenceAlert(level, suggestedLevel, tagStats);
+  function scrollAfterFinalLevelSelection(level: AssessmentLevel) {
+    const nextCoherenceAlert = getCoherenceAlert(level, suggestedLevel, tagStats, activeFramework);
     const selector = nextCoherenceAlert ? ".coherenceAlert" : ".phraseBankPanel";
     const block: ScrollLogicalPosition = nextCoherenceAlert ? "center" : "start";
 
     window.setTimeout(() => {
       document.querySelector(selector)?.scrollIntoView({ block, behavior: "auto" });
     }, 0);
+  }
+
+  function changeFramework(frameworkId: FrameworkId) {
+    const config = frameworkConfigs[frameworkId];
+    const firstStage = getFrameworkStages(config, false)[0].id;
+
+    setSession((current) => ({
+      ...current,
+      frameworkId,
+      candidate: {
+        ...current.candidate,
+        client: config.defaultClient,
+      },
+      ratings: createEmptyRatings(),
+      notes: createEmptyNotes(),
+      selectedStage: firstStage,
+      summary: "",
+      cExtensionEnabled: false,
+      updatedAt: new Date().toISOString(),
+    }));
+    setLastLiveStage(firstStage);
+    setTagView("frequent");
+    setPerformance({
+      comprehension: 0,
+      autonomy: 0,
+      complexity: 0,
+      precision: 0,
+    });
+    setCopyStatus("");
+  }
+
+  function toggleCExtension() {
+    setSession((current) => {
+      const nextEnabled = !current.cExtensionEnabled;
+      const config = frameworkConfigs[current.frameworkId ?? "cefr-ccc"];
+      const nextStages = getFrameworkStages(config, nextEnabled);
+      const selectedStage = nextStages.some((stage) => stage.id === current.selectedStage)
+        ? current.selectedStage
+        : nextStages[0].id;
+
+      return {
+        ...current,
+        cExtensionEnabled: nextEnabled,
+        selectedStage,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }
+
+  function loadSampleData(frameworkId: FrameworkId) {
+    const config = frameworkConfigs[frameworkId];
+    const sample = createSession(frameworkId);
+
+    const sampleRatings: Partial<CriterionRating> =
+      frameworkId === "cefr-ccc"
+        ? {
+            fluency: "B2",
+            interaction: "B2",
+            grammar: "B1+",
+            vocabulary: "B2",
+            coherence: "B2",
+            pronunciation: "B2",
+            finalLevel: "B2",
+          }
+        : {
+            comprehensionQuestions: "B+",
+            fluency: "B+",
+            grammar: "B",
+            vocabulary: "B+",
+            coherence: "B+",
+            interaction: "B+",
+            justification: "B+",
+            abstraction: "C-",
+            finalLevel: "B+",
+          };
+
+    setSession({
+      ...sample,
+      candidate: {
+        ...sample.candidate,
+        fullName: frameworkId === "cefr-ccc" ? "Exemple CCC" : "Exemple PFL2/SLE",
+        email: frameworkId === "cefr-ccc" ? "exemple.ccc@knowledgecircle.ca" : "exemple.sle@knowledgecircle.ca",
+        evaluatorName: "Évaluateur test",
+        targetLevel: frameworkId === "cefr-ccc" ? "B2" : "B/C",
+        positionContext: "Données test pour vérifier la configuration.",
+      },
+      ratings: { ...createEmptyRatings(), ...sampleRatings },
+      notes: {
+        ...createEmptyNotes(),
+        generalObservations: "observation générale : communication fonctionnelle",
+        strengths:
+          frameworkId === "cefr-ccc"
+            ? "force communicative : bonne fluidité; exemple fort : a justifié une recommandation"
+            : "force PFL2/SLE : bonne interaction; preuve niveau C : argumentation nuancée",
+        challenges: frameworkId === "cefr-ccc" ? "discours : justification faible" : "discours et interaction : nuance limitée pour le niveau C",
+        finalJudgment:
+          frameworkId === "cefr-ccc"
+            ? "La personne candidate démontre une communication orale professionnelle généralement autonome, avec des preuves suffisantes pour soutenir le niveau retenu."
+            : "La personne candidate démontre un profil fonctionnel solide avec certaines preuves d'argumentation plus avancée, mais le niveau C doit rester interprété avec prudence.",
+      },
+      selectedStage: getFrameworkStages(config, frameworkId === "pfl2-sle")[0].id,
+      cExtensionEnabled: frameworkId === "pfl2-sle",
+      updatedAt: new Date().toISOString(),
+    });
+    setLastLiveStage(getFrameworkStages(config, frameworkId === "pfl2-sle")[0].id);
+    setCandidatePanelOpen(false);
+    setAssessmentStarted(true);
+    setViewMode("finalize");
+    setTagView("frequent");
+    setCopyStatus("");
   }
 
   return (
@@ -1853,10 +2615,25 @@ ${recommendations}`;
           <img className="brandLogo" src={`${import.meta.env.BASE_URL}kc-logo.png`} alt="Knowledge Circle" />
           <div>
             <p className="eyebrow">Outil interne d'évaluation Knowledge Circle</p>
-            <h1>Console d'évaluation orale KC - CCC CECR/CEFR</h1>
+            <h1>{activeFramework.appTitle}</h1>
           </div>
         </div>
         <div className="headerMeta" aria-label="État de l'évaluation en cours">
+          <label className="frameworkSelect">
+            <span>Cadre</span>
+            <select
+              aria-label="Cadre d'évaluation"
+              value={activeFramework.id}
+              onChange={(event) => changeFramework(event.target.value as FrameworkId)}
+            >
+              {Object.values(frameworkConfigs).map((config) => (
+                <option key={config.id} value={config.id}>
+                  {config.selectorLabel}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span>Mode: {activeFramework.modeLabel}</span>
           <span>{session.candidate.client}</span>
           <span>{session.candidate.assessmentLanguage} - interaction orale</span>
           <span>{session.candidate.fullName || "Nouvelle personne candidate"}</span>
@@ -1874,7 +2651,7 @@ ${recommendations}`;
 
       {showGuidePage ? (
         <main className="guidePageShell">
-          <EvaluatorGuidePage onClose={() => setShowGuidePage(false)} />
+          <EvaluatorGuidePage framework={activeFramework} onClose={() => setShowGuidePage(false)} />
         </main>
       ) : (
       <main
@@ -1887,7 +2664,7 @@ ${recommendations}`;
       >
         <nav className="stageRail" aria-label="Étapes de l'évaluation">
           <div className="railTitle">Étapes</div>
-          {stages.map((stage) => {
+          {activeStages.map((stage) => {
             const isActiveStage = stage.id === session.selectedStage && assessmentStarted;
 
             return (
@@ -1913,6 +2690,12 @@ ${recommendations}`;
               </React.Fragment>
             );
           })}
+          {assessmentStarted && activeFramework.id === "pfl2-sle" ? (
+            <button className="cExtensionButton" onClick={toggleCExtension} type="button">
+              {session.cExtensionEnabled ? "Désactiver l'extension niveau C" : "Activer l'extension niveau C"}
+              <small>{session.cExtensionEnabled ? "Étape 7 visible" : "Au besoin seulement"}</small>
+            </button>
+          ) : null}
         </nav>
 
         <section className="centerColumn">
@@ -1934,6 +2717,12 @@ ${recommendations}`;
                 <button className="secondaryButton" onClick={saveDraft}>
                   <Save size={16} aria-hidden="true" />
                   Sauvegarder
+                </button>
+                <button className="secondaryButton compactAction" onClick={() => loadSampleData("cefr-ccc")} type="button">
+                  Test CCC
+                </button>
+                <button className="secondaryButton compactAction" onClick={() => loadSampleData("pfl2-sle")} type="button">
+                  Test PFL2
                 </button>
                 {assessmentStarted ? (
                   <div className="modeSwitch" aria-label="Mode de travail">
@@ -2110,12 +2899,12 @@ ${recommendations}`;
                 </div>
               </section>
 
-              <section className="panel ratingSection" aria-label="Grille d'évaluation CECR CEFR">
+              <section className="panel ratingSection" aria-label={activeFramework.ratingAriaLabel}>
                 <div className="panelHeader">
                   <div>
                     <p className="eyebrow">Après l'entretien</p>
-                    <h2>Grille d'évaluation CECR / CEFR</h2>
-                    <p>Les suggestions sont générées localement à partir des tags rapides et du fil conducteur. Elles doivent être confirmées ou modifiées par l'évaluateur.</p>
+                    <h2>{activeFramework.ratingTitle}</h2>
+                    <p>{activeFramework.ratingHelp}</p>
                   </div>
                   <div className="actionRow">
                     <button
@@ -2130,7 +2919,7 @@ ${recommendations}`;
                 </div>
 
                 <div className="ratingList">
-                  {criteria.map((criterion) => {
+                  {activeCriteria.map((criterion) => {
                     const value = session.ratings[criterion.key];
                     const suggestion = criterionSuggestions[criterion.key];
                     const hasSuggestion = Boolean(suggestion.level);
@@ -2149,10 +2938,10 @@ ${recommendations}`;
                         <select
                           aria-label={criterion.label}
                           value={displayedValue}
-                          onChange={(event) => updateRating(criterion.key, event.target.value as CEFRLevel | "")}
+                          onChange={(event) => updateRating(criterion.key, event.target.value as AssessmentLevel | "")}
                         >
                           <option value="">Sélectionner</option>
-                          {levels.map((level) => (
+                          {activeLevels.map((level) => (
                             <option key={level} value={level}>
                               {level}
                             </option>
@@ -2185,7 +2974,7 @@ ${recommendations}`;
                         )}
                         <small>
                           {displayedValue
-                            ? descriptors[criterion.key][displayedValue]
+                            ? activeFramework.descriptors[criterion.key][displayedValue] ?? "Descripteur à confirmer pour ce critère."
                             : "Sélectionnez un niveau pour afficher le descripteur."}
                         </small>
                       </div>
@@ -2198,6 +2987,7 @@ ${recommendations}`;
                     <span>Niveau suggéré</span>
                     <strong>{suggestedLevel || "Cotes insuffisantes"}</strong>
                     <p>{ratingSuggestedLevel ? "Niveau suggéré selon les cotes confirmées." : "Niveau suggéré à partir des tags rapides et du fil conducteur."} Le niveau final doit être confirmé par l'évaluateur ou l'évaluatrice.</p>
+                    <p>Suggestion basée sur les observations sélectionnées. Le niveau final doit être confirmé par l'évaluateur ou l'évaluatrice.</p>
                   </div>
                   {coherenceAlert ? (
                     <div className="coherenceAlert">
@@ -2211,10 +3001,10 @@ ${recommendations}`;
                     <select
                       aria-label="Niveau final recommandé"
                       value={session.ratings.finalLevel}
-                      onChange={(event) => handleFinalLevelChange(event.target.value as CEFRLevel | "")}
+                      onChange={(event) => handleFinalLevelChange(event.target.value as AssessmentLevel | "")}
                     >
                       <option value="">Choisir / valider le niveau final</option>
-                      {levels.map((level) => (
+                      {activeLevels.map((level) => (
                         <option key={level} value={level}>
                           {level}
                         </option>
@@ -2306,13 +3096,13 @@ ${recommendations}`;
               <section className="panel summaryPanel">
                 <div className="panelHeader">
                   <div>
-                    <h2>Résumé CECR/CEFR généré</h2>
-                    <p>Modifiez le texte généré avant de le copier dans le rapport d'évaluation CCC.</p>
+                    <h2>{activeFramework.summaryTitle}</h2>
+                    <p>Modifiez le texte généré avant de le copier dans le {activeFramework.summaryReportTarget}.</p>
                   </div>
                   <div className="actionRow">
                     <button className="primaryButton" disabled={!hasFinalJudgment} onClick={generateSummary}>
                       <Sparkles size={17} aria-hidden="true" />
-                      Générer le résumé CECR
+                      {activeFramework.summaryButtonLabel}
                     </button>
                     <button className="secondaryButton" onClick={copySummary} disabled={!session.summary}>
                       <Clipboard size={16} aria-hidden="true" />
@@ -2325,7 +3115,7 @@ ${recommendations}`;
                   value={session.summary}
                   placeholder={
                     hasFinalJudgment
-                      ? "Générez un résumé CECR/CEFR prêt pour le rapport après avoir sélectionné les cotes et ajouté des notes."
+                      ? activeFramework.summaryPlaceholder
                       : "Complétez d'abord l'évaluation finale pour activer la génération du résumé."
                   }
                   onChange={(event) =>
@@ -2393,7 +3183,7 @@ ${recommendations}`;
                       title={`${group.title} : ${tag}`}
                       type="button"
                     >
-                      <span>{getTagLabel(tag)}</span>
+                      <span>{getTagLabel(tag, activeFramework)}</span>
                       <small>{tagState === "strong" ? `${getGroupShortLabel(group)} +` : getGroupShortLabel(group)}</small>
                     </button>
                   );
@@ -2422,7 +3212,7 @@ ${recommendations}`;
                             title={tag}
                             type="button"
                           >
-                            {getTagLabel(tag)}{tagState === "strong" ? " +" : ""}
+                            {getTagLabel(tag, activeFramework)}{tagState === "strong" ? " +" : ""}
                           </button>
                         );
                       })}
@@ -2456,7 +3246,7 @@ ${recommendations}`;
   );
 }
 
-function EvaluatorGuidePage({ onClose }: { onClose: () => void }) {
+function EvaluatorGuidePage({ framework, onClose }: { framework: FrameworkConfig; onClose: () => void }) {
   return (
     <section className="guidePage panel" aria-label="Guide d'utilisation pour l'évaluateur">
       <div className="guideHero">
@@ -2474,7 +3264,7 @@ function EvaluatorGuidePage({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="guideFlow" aria-label="Déroulement recommandé">
-        {evaluatorGuideSteps.map((step, index) => (
+        {framework.guideSteps.map((step, index) => (
           <article className="guideStep" key={step}>
             <span>{index + 1}</span>
             <p>{step}</p>
@@ -2497,16 +3287,16 @@ function EvaluatorGuidePage({ onClose }: { onClose: () => void }) {
           <h3>Fil conducteur</h3>
           <ul>
             <li>Utilisez-le pour garder une vue globale de la performance.</li>
-            <li>Solide partout ne donne pas automatiquement C1/C2.</li>
+            <li>Solide partout ne donne pas automatiquement le niveau le plus élevé.</li>
             <li>Il sert à déclencher une vérification, pas à remplacer l'évaluateur.</li>
           </ul>
         </section>
 
         <section className="guideBlock">
-          <h3>Approfondissement C</h3>
+          <h3>{framework.id === "pfl2-sle" ? "Extension niveau C" : "Approfondissement C"}</h3>
           <ul>
-            <li>La boîte apparaît si des preuves B2+ ou avancées s'accumulent.</li>
-            <li>Posez 1 ou 2 questions C pour confirmer ou écarter C1/C2.</li>
+            <li>{framework.id === "pfl2-sle" ? "Activez cette étape seulement si des preuves solides au-dessus de B apparaissent." : "La boîte apparaît si des preuves B2+ ou avancées s'accumulent."}</li>
+            <li>Posez 1 ou 2 questions pour confirmer ou écarter le niveau avancé.</li>
             <li>Ajoutez les tags C seulement si la réponse apporte une vraie preuve.</li>
           </ul>
         </section>
@@ -2515,9 +3305,9 @@ function EvaluatorGuidePage({ onClose }: { onClose: () => void }) {
           <h3>Après l'entretien</h3>
           <ul>
             <li>Utilisez Finaliser après avoir quitté la personne candidate.</li>
-            <li>Confirmez ou modifiez chaque niveau CECR.</li>
+            <li>Confirmez ou modifiez chaque niveau.</li>
             <li>Validez le niveau final avant d'utiliser la banque d'évaluation finale.</li>
-            <li>Relisez toujours le résumé avant de le copier dans le rapport CCC.</li>
+            <li>Relisez toujours le résumé avant de le copier dans le rapport.</li>
           </ul>
         </section>
 
@@ -2527,7 +3317,7 @@ function EvaluatorGuidePage({ onClose }: { onClose: () => void }) {
             <li>La banque propose des formulations standard pour uniformiser les rapports.</li>
             <li>Une formulation choisie est copiée dans le champ Évaluation finale.</li>
             <li>Le texte reste entièrement modifiable : ajoutez les preuves, nuancez et retirez ce qui ne s'applique pas.</li>
-            <li>Le résumé CECR doit être généré seulement après avoir relu et adapté cette évaluation finale.</li>
+            <li>Le résumé doit être généré seulement après avoir relu et adapté cette évaluation finale.</li>
           </ul>
         </section>
       </div>
@@ -2636,8 +3426,9 @@ function RailInfoBlock({ title, items }: { title: string; items: string[] }) {
 function getCriterionSuggestions(
   activeTags: ActiveTagEvidence[],
   performance: Record<PerformanceKey, PerformanceValue>,
+  config: FrameworkConfig,
 ): Record<CriterionKey, CriterionSuggestion> {
-  const evidence = criteria.reduce(
+  const evidence = config.criteria.reduce(
     (accumulator, { key }) => ({
       ...accumulator,
       [key]: [] as { score: number; weight: number; reason: string }[],
@@ -2646,7 +3437,7 @@ function getCriterionSuggestions(
   );
 
   activeTags.forEach(({ tag, state }) => {
-    const rule = tagSuggestionRules.find((candidate) => candidate.tag === tag);
+    const rule = config.tagSuggestionRules.find((candidate) => candidate.tag === tag);
 
     if (!rule) {
       return;
@@ -2665,7 +3456,7 @@ function getCriterionSuggestions(
 
   performanceSignals.forEach(({ key }) => {
     const signal = performance[key];
-    const rule = performanceSuggestionRules[key][signal];
+    const rule = config.performanceSuggestionRules[key][signal];
 
     if (!rule) {
       return;
@@ -2680,7 +3471,7 @@ function getCriterionSuggestions(
     });
   });
 
-  return criteria.reduce(
+  return config.criteria.reduce(
     (suggestions, { key }) => {
       const items = evidence[key];
 
@@ -2700,7 +3491,7 @@ function getCriterionSuggestions(
       return {
         ...suggestions,
         [key]: {
-          level: getLevelFromEvidenceScore(score),
+          level: getLevelFromEvidenceScore(score, config),
           confidence,
           reasons,
         },
@@ -2710,68 +3501,86 @@ function getCriterionSuggestions(
   );
 }
 
-function getLevelFromEvidenceScore(score: number): CEFRLevel {
-  if (score < 1.7) return "A1";
-  if (score < 2.5) return "A2";
-  if (score < 3.25) return "B1";
-  if (score < 3.75) return "B1+";
-  if (score < 4.35) return "B2";
-  if (score < 4.75) return "B2+";
-  if (score < 5.25) return "C1";
-  if (score < 5.7) return "C1+";
-  return "C2";
+function getLevelFromEvidenceScore(score: number, config: FrameworkConfig): AssessmentLevel {
+  if (config.id === "cefr-ccc") {
+    if (score < 1.7) return "A1";
+    if (score < 2.5) return "A2";
+    if (score < 3.25) return "B1";
+    if (score < 3.75) return "B1+";
+    if (score < 4.35) return "B2";
+    if (score < 4.75) return "B2+";
+    if (score < 5.25) return "C1";
+    if (score < 5.7) return "C1+";
+    return "C2";
+  }
+
+  if (score < 2.7) return "Inférieur à B";
+  if (score < 3.25) return "B-";
+  if (score < 3.85) return "B";
+  if (score < 4.45) return "B+";
+  if (score < 5.05) return "C-";
+  if (score < 5.55) return "C";
+  return "C+";
 }
 
-function getSuggestedLevelFromSuggestions(suggestions: Record<CriterionKey, CriterionSuggestion>): CEFRLevel | "" {
-  const selected = criteria
+function getSuggestedLevelFromSuggestions(
+  suggestions: Record<CriterionKey, CriterionSuggestion>,
+  config: FrameworkConfig,
+): AssessmentLevel | "" {
+  const selected = config.criteria
     .map(({ key }) => suggestions[key].level)
-    .filter((level): level is CEFRLevel => Boolean(level));
+    .filter((level): level is AssessmentLevel => Boolean(level));
 
   if (!selected.length) {
     return "";
   }
 
-  const average = selected.reduce((total, level) => total + levelValues[level], 0) / selected.length;
+  const average = selected.reduce((total, level) => total + config.levelValues[level], 0) / selected.length;
 
-  return getLevelFromEvidenceScore(average);
+  return getLevelFromEvidenceScore(average, config);
 }
 
-function getSuggestedLevel(ratings: CriterionRating): CEFRLevel | "" {
-  const selected = criteria
+function getSuggestedLevel(ratings: CriterionRating, config: FrameworkConfig): AssessmentLevel | "" {
+  const selected = config.criteria
     .map(({ key }) => ratings[key])
-    .filter((level): level is CEFRLevel => Boolean(level));
+    .filter((level): level is AssessmentLevel => Boolean(level) && isFrameworkLevel(level, config));
 
   if (!selected.length) {
     return "";
   }
 
-  const average = selected.reduce((total, level) => total + levelValues[level], 0) / selected.length;
+  const average = selected.reduce((total, level) => total + config.levelValues[level], 0) / selected.length;
 
-  if (average < 2) return "A1";
-  if (average < 3) return "A2";
-  if (average < 3.5) return "B1";
-  if (average < 4) return "B1+";
-  if (average < 4.5) return "B2";
-  if (average < 5) return "B2+";
-  if (average < 5.5) return "C1";
-  if (average < 5.9) return "C1+";
-  return "C2";
+  if (config.id === "cefr-ccc") {
+    if (average < 2) return "A1";
+    if (average < 3) return "A2";
+    if (average < 3.5) return "B1";
+    if (average < 4) return "B1+";
+    if (average < 4.5) return "B2";
+    if (average < 5) return "B2+";
+    if (average < 5.5) return "C1";
+    if (average < 5.9) return "C1+";
+    return "C2";
+  }
+
+  return getLevelFromEvidenceScore(average, config);
 }
 
 function shouldShowCProbe(
-  suggestedLevel: CEFRLevel | "",
+  suggestedLevel: AssessmentLevel | "",
   ratings: CriterionRating,
   stats: TagStats,
   performance: Record<PerformanceKey, PerformanceValue>,
+  config: FrameworkConfig,
 ) {
-  const suggestedValue = suggestedLevel ? levelValues[suggestedLevel] : 0;
-  const hasCLevelRating = criteria.some(({ key }) => {
+  const suggestedValue = suggestedLevel ? config.levelValues[suggestedLevel] : 0;
+  const hasCLevelRating = config.criteria.some(({ key }) => {
     const level = ratings[key];
-    return Boolean(level && levelValues[level] >= levelValues.C1);
+    return Boolean(level && config.levelValues[level] >= config.levelValues.C1);
   });
-  const hasAdvancedCriterion = criteria.some(({ key }) => {
+  const hasAdvancedCriterion = config.criteria.some(({ key }) => {
     const level = ratings[key];
-    return Boolean(level && levelValues[level] >= levelValues["B2+"]);
+    return Boolean(level && config.levelValues[level] >= config.levelValues["B2+"]);
   });
   const solidSignals = performanceSignals.filter(({ key }) => performance[key] === 3).length;
   const broadSolidProfile = stats.strength >= 4 && solidSignals >= 3 && stats.challenge <= 1;
@@ -2779,7 +3588,7 @@ function shouldShowCProbe(
   const manyStrengthsWithoutChallenges = stats.strength >= 8 && stats.challenge === 0;
 
   return (
-    suggestedValue >= levelValues["B2+"] ||
+    suggestedValue >= config.levelValues["B2+"] ||
     hasCLevelRating ||
     hasAdvancedCriterion ||
     broadSolidProfile ||
@@ -2788,8 +3597,8 @@ function shouldShowCProbe(
   );
 }
 
-function isCEFRLevel(level: string): level is CEFRLevel {
-  return levels.includes(level as CEFRLevel);
+function isFrameworkLevel(level: string, config: FrameworkConfig): level is AssessmentLevel {
+  return config.levels.includes(level as AssessmentLevel);
 }
 
 function getJudgmentPhraseOptions(
@@ -2797,8 +3606,9 @@ function getJudgmentPhraseOptions(
   activeTags: ActiveTagEvidence[],
   performance: Record<PerformanceKey, PerformanceValue>,
   stats: TagStats,
+  config: FrameworkConfig,
 ): JudgmentPhrase[] {
-  const band = getJudgmentLevelBand(level);
+  const band = getJudgmentLevelBand(level, config);
   const observedTags = activeTags.map(({ tag }) => tag);
   const challengeTags = activeTags
     .filter(({ group }) => group.tone === "challenge")
@@ -2873,7 +3683,7 @@ function getJudgmentPhraseOptions(
     });
   }
 
-  if (stats.challenge >= 3 && isCEFRLevel(level) && levelValues[level] >= 4) {
+  if (stats.challenge >= 3 && isFrameworkLevel(level, config) && config.levelValues[level] >= 4) {
     phrases.push({
       id: "high-level-caution",
       category: "Prudence",
@@ -2885,47 +3695,54 @@ function getJudgmentPhraseOptions(
   return phrases.filter((phrase, index, list) => list.findIndex((item) => item.text === phrase.text) === index).slice(0, 8);
 }
 
-function getJudgmentLevelBand(level: string): "emerging" | "functional" | "autonomous" | "advanced" {
-  if (!isCEFRLevel(level)) {
+function getJudgmentLevelBand(level: string, config: FrameworkConfig): "emerging" | "functional" | "autonomous" | "advanced" {
+  if (!isFrameworkLevel(level, config)) {
     return "functional";
   }
 
-  if (level === "A1" || level === "A2") {
+  if (level === "A1" || level === "A2" || level === "Inférieur à B") {
     return "emerging";
   }
 
-  if (level === "B1" || level === "B1+") {
+  if (level === "B1" || level === "B1+" || level === "B-" || level === "B") {
     return "functional";
   }
 
-  if (level === "B2" || level === "B2+") {
+  if (level === "B2" || level === "B2+" || level === "B+" || level === "C-") {
     return "autonomous";
   }
 
   return "advanced";
 }
 
-function getRecommendations(level: string): string[] {
-  if (!isCEFRLevel(level)) {
+function getRecommendations(level: string, config: FrameworkConfig): string[] {
+  if (!isFrameworkLevel(level, config)) {
     return [
-      "Confirmer le niveau final CECR/CEFR avant de formuler des recommandations détaillées.",
+      "Confirmer le niveau final avant de formuler des recommandations détaillées.",
       "Ajouter les observations et exemples précis recueillis pendant l'évaluation orale.",
     ];
   }
-  if (level === "C2") return recommendationTemplates.C2;
-  if (level === "C1" || level === "C1+") return recommendationTemplates["C1/C1+"];
-  if (level === "B2" || level === "B2+") return recommendationTemplates["B2/B2+"];
-  if (level === "A1" || level === "A2") return recommendationTemplates["A1/A2"];
-  return recommendationTemplates["B1/B1+"];
+
+  if (config.id === "pfl2-sle") {
+    if (level === "C-" || level === "C" || level === "C+") return config.recommendationTemplates["C-/C/C+"];
+    if (level === "B" || level === "B+") return config.recommendationTemplates["B/B+"];
+    return config.recommendationTemplates["Inférieur à B/B-"];
+  }
+
+  if (level === "C2") return config.recommendationTemplates.C2;
+  if (level === "C1" || level === "C1+") return config.recommendationTemplates["C1/C1+"];
+  if (level === "B2" || level === "B2+") return config.recommendationTemplates["B2/B2+"];
+  if (level === "A1" || level === "A2") return config.recommendationTemplates["A1/A2"];
+  return config.recommendationTemplates["B1/B1+"];
 }
 
-function getCoherenceAlert(level: string, suggestedLevel: CEFRLevel | "", stats: TagStats) {
-  if (!isCEFRLevel(level)) {
+function getCoherenceAlert(level: string, suggestedLevel: AssessmentLevel | "", stats: TagStats, config: FrameworkConfig) {
+  if (!isFrameworkLevel(level, config)) {
     return "";
   }
 
-  const levelValue = levelValues[level];
-  const suggestedValue = suggestedLevel ? levelValues[suggestedLevel] : 0;
+  const levelValue = config.levelValues[level];
+  const suggestedValue = suggestedLevel ? config.levelValues[suggestedLevel] : 0;
   const challengePressure = stats.challenge + stats.strongIntensity;
   const strengthPressure = stats.strength;
 
@@ -2942,6 +3759,47 @@ function getCoherenceAlert(level: string, suggestedLevel: CEFRLevel | "", stats:
   }
 
   return "";
+}
+
+function normalizeSession(draft: Partial<OralAssessmentSession>): OralAssessmentSession {
+  const frameworkId: FrameworkId =
+    draft.frameworkId && frameworkConfigs[draft.frameworkId] ? draft.frameworkId : "cefr-ccc";
+  const config = frameworkConfigs[frameworkId];
+  const cExtensionEnabled = Boolean(draft.cExtensionEnabled);
+  const allowedStages = getFrameworkStages(config, cExtensionEnabled);
+  const fallback = createSession(frameworkId);
+  const ratings = { ...createEmptyRatings(), ...(draft.ratings ?? {}) };
+
+  (Object.keys(ratings) as (keyof CriterionRating)[]).forEach((key) => {
+    const value = ratings[key];
+
+    if (value && !isFrameworkLevel(value, config)) {
+      ratings[key] = "";
+    }
+  });
+
+  return {
+    ...fallback,
+    ...draft,
+    frameworkId,
+    candidate: {
+      ...fallback.candidate,
+      ...(draft.candidate ?? {}),
+      client: draft.candidate?.client ?? config.defaultClient,
+    },
+    ratings,
+    notes: {
+      ...fallback.notes,
+      ...(draft.notes ?? {}),
+    },
+    selectedStage: allowedStages.some((stage) => stage.id === draft.selectedStage)
+      ? draft.selectedStage ?? allowedStages[0].id
+      : allowedStages[0].id,
+    cExtensionEnabled,
+    summary: draft.summary ?? "",
+    createdAt: draft.createdAt ?? fallback.createdAt,
+    updatedAt: draft.updatedAt ?? fallback.updatedAt,
+  };
 }
 
 function formatElapsed(seconds: number) {
