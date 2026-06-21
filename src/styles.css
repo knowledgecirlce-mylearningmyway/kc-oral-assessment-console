@@ -479,25 +479,33 @@ button:disabled {
   display: none;
 }
 
-.layout.finalizeMode .ratingSection {
+.layout.liveMode .assessmentPanel {
+  display: none;
+}
+
+.layout.finalizeMode .evidenceSummaryPanel {
   order: 1;
+}
+
+.layout.finalizeMode .ratingSection {
+  order: 2;
 }
 
 .layout.finalizeMode .phraseBankPanel,
 .layout.finalizeMode .finalLevelGate {
-  order: 2;
-}
-
-.layout.finalizeMode .finalJudgmentPanel {
   order: 3;
 }
 
-.layout.finalizeMode .summaryPanel {
+.layout.finalizeMode .finalJudgmentPanel {
   order: 4;
 }
 
-.layout.finalizeMode .notesPanel {
+.layout.finalizeMode .summaryPanel {
   order: 5;
+}
+
+.layout.finalizeMode .notesPanel {
+  order: 6;
 }
 
 .stageRail,
@@ -601,6 +609,109 @@ button:disabled {
   display: grid;
   align-content: start;
   gap: 14px;
+}
+
+.liveToolbar {
+  display: grid;
+  gap: 10px;
+  padding: 11px 12px;
+}
+
+.liveToolbarMain {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.liveToolbarMain h2 {
+  margin: 1px 0 3px;
+  color: #1f2d43;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.liveToolbarMain p:not(.eyebrow) {
+  margin: 0;
+  color: #607487;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.liveActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.stepProgress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.progressDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cfd9e5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #52606d;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.progressDot.complete {
+  border-color: #b7dfc8;
+  background: #f1faf4;
+  color: #2f7a4e;
+}
+
+.progressDot.active,
+.progressDot[aria-current="step"] {
+  border-color: #2b7894;
+  background: #2b7894;
+  color: #ffffff;
+}
+
+.liveEvidenceStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.liveEvidenceStrip div {
+  min-width: 0;
+  border: 1px solid #e1e8f0;
+  border-radius: 8px;
+  background: #f8fbfd;
+  padding: 8px;
+}
+
+.liveEvidenceStrip span {
+  display: block;
+  margin-bottom: 4px;
+  color: #66788a;
+  font-size: 10px;
+  font-weight: 840;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.liveEvidenceStrip strong {
+  display: block;
+  color: #24364b;
+  font-size: 12px;
+  line-height: 1.28;
+  font-weight: 700;
+}
+
+.evidenceSummaryPanel .liveEvidenceStrip {
+  padding: 12px;
 }
 
 .railGuidance {
@@ -1803,6 +1914,7 @@ button:disabled {
   .questionsColumn,
   .guideFlow,
   .guideGrid,
+  .liveEvidenceStrip,
   .tagGrid,
   .notesGrid,
   .ratingList,
@@ -1815,6 +1927,14 @@ button:disabled {
 
   .panelHeader {
     flex-direction: column;
+  }
+
+  .liveToolbarMain {
+    flex-direction: column;
+  }
+
+  .liveActions {
+    justify-content: flex-start;
   }
 
   .guideHero {

@@ -65,6 +65,9 @@ type ViewMode = "live" | "finalize";
 type TagState = "inactive" | "normal" | "strong";
 type PerformanceKey = "comprehension" | "autonomy" | "complexity" | "precision";
 type PerformanceValue = 0 | 1 | 2 | 3;
+type StoredDraft = Partial<OralAssessmentSession> & {
+  performance?: Partial<Record<PerformanceKey, PerformanceValue>>;
+};
 type TagStats = {
   total: number;
   challenge: number;
@@ -171,6 +174,7 @@ type FrameworkConfig = {
 };
 
 const STORAGE_KEY = "kc-oral-assessment-console-draft";
+const AUTO_SAVE_INTERVAL_MS = 25000;
 
 const performanceSignals: { key: PerformanceKey; label: string }[] = [
   { key: "comprehension", label: "Compréhension" },
@@ -1963,6 +1967,15 @@ function createEmptyNotes(): AssessmentNotes {
   };
 }
 
+function createEmptyPerformance(): Record<PerformanceKey, PerformanceValue> {
+  return {
+    comprehension: 0,
+    autonomy: 0,
+    complexity: 0,
+    precision: 0,
+  };
+}
+
 function getFrameworkStages(config: FrameworkConfig, cExtensionEnabled = false) {
   return config.stages.filter((stage) => !stage.optional || cExtensionEnabled);
 }
@@ -2045,16 +2058,18 @@ function App() {
   const [viewMode, setViewMode] = React.useState<ViewMode>("live");
   const [lastLiveStage, setLastLiveStage] = React.useState(CEFR_CCC_CONFIG.stages[0].id);
   const [tagView, setTagView] = React.useState<TagView>("frequent");
-  const [performance, setPerformance] = React.useState<Record<PerformanceKey, PerformanceValue>>({
-    comprehension: 0,
-    autonomy: 0,
-    complexity: 0,
-    precision: 0,
-  });
+  const [performance, setPerformance] = React.useState<Record<PerformanceKey, PerformanceValue>>(() =>
+    createEmptyPerformance(),
+  );
   const [elapsedSeconds, setElapsedSeconds] = React.useState(0);
   const [savedStatus, setSavedStatus] = React.useState("Aucun brouillon local sauvegardé dans ce navigateur.");
   const [copyStatus, setCopyStatus] = React.useState("");
   const [showGuidePage, setShowGuidePage] = React.useState(false);
+  const latestDraftRef = React.useRef({ session, performance });
+
+  React.useEffect(() => {
+    latestDraftRef.current = { session, performance };
+  }, [session, performance]);
 
   React.useEffect(() => {
     const timer = window.setInterval(() => {
@@ -2064,6 +2079,22 @@ function App() {
 
     return () => window.clearInterval(timer);
   }, [session.createdAt]);
+
+  React.useEffect(() => {
+    if (!frameworkChosen) {
+      return;
+    }
+
+    const autoSaveTimer = window.setInterval(() => {
+      const { session: currentSession, performance: currentPerformance } = latestDraftRef.current;
+      const nextSession = { ...currentSession, updatedAt: new Date().toISOString() };
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...nextSession, performance: currentPerformance }));
+      setSavedStatus(`Sauvegarde automatique à ${new Date().toLocaleTimeString()}.`);
+    }, AUTO_SAVE_INTERVAL_MS);
+
+    return () => window.clearInterval(autoSaveTimer);
+  }, [frameworkChosen]);
 
   const activeFramework = frameworkConfigs[session.frameworkId ?? "cefr-ccc"];
   const activeStages = getFrameworkStages(activeFramework, session.cExtensionEnabled);
@@ -2210,6 +2241,19 @@ function App() {
   const visibleTagGroups = getTagGroupsForView(tagView, activeFramework).filter(
     (group) => shouldPromptCProbe || !group.title.toLowerCase().includes("approfondissement c"),
   );
+  const liveStageIndex = Math.max(0, activeStages.findIndex((stage) => stage.id === session.selectedStage));
+  const nextStage = activeStages[liveStageIndex + 1];
+  const liveStrengthTags = activeTagEvidence
+    .filter(({ group }) => group.tone === "strength")
+    .map(({ tag }) => getTagLabel(tag, activeFramework))
+    .slice(0, 3);
+  const liveChallengeTags = activeTagEvidence
+    .filter(({ group }) => group.tone === "challenge")
+    .map(({ tag }) => getTagLabel(tag, activeFramework))
+    .slice(0, 3);
+  const livePerformanceSignals = performanceSignals
+    .filter(({ key }) => performance[key] !== 0)
+    .map(({ key, label }) => `${label} : ${performanceLabels[performance[key]]}`);
 
   function saveDraft() {
     if (!frameworkChosen) {
@@ -2218,7 +2262,7 @@ function App() {
     }
 
     const nextSession = { ...session, updatedAt: new Date().toISOString() };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...nextSession, performance }));
     setSession(nextSession);
     setSavedStatus(`Brouillon sauvegardé localement à ${new Date().toLocaleTimeString()}.`);
   }
@@ -2232,7 +2276,7 @@ function App() {
     }
 
     try {
-      const parsed = JSON.parse(rawDraft) as Partial<OralAssessmentSession>;
+      const parsed = JSON.parse(rawDraft) as StoredDraft;
       const normalized = normalizeSession(parsed);
       const normalizedFramework = frameworkConfigs[normalized.frameworkId];
       const normalizedStages = getFrameworkStages(normalizedFramework, normalized.cExtensionEnabled);
@@ -2245,6 +2289,7 @@ function App() {
       setAssessmentStarted(true);
       setViewMode("live");
       setLastLiveStage(selectedStage);
+      setPerformance({ ...createEmptyPerformance(), ...parsed.performance });
       setSavedStatus("Brouillon local précédent chargé.");
     } catch {
       setSavedStatus("Le brouillon local n'a pas pu être chargé.");
@@ -2269,12 +2314,7 @@ function App() {
     setViewMode("live");
     setLastLiveStage(freshSession.selectedStage);
     setTagView("frequent");
-    setPerformance({
-      comprehension: 0,
-      autonomy: 0,
-      complexity: 0,
-      precision: 0,
-    });
+    setPerformance(createEmptyPerformance());
     setSavedStatus("Évaluation et brouillon local effacés.");
     setCopyStatus("");
   }
@@ -2402,6 +2442,7 @@ ${recommendations}`;
     setCandidatePanelOpen(false);
     setAssessmentStarted(true);
     setViewMode("live");
+    setSavedStatus("Sauvegarde automatique active.");
     setSession((current) => ({
       ...current,
       selectedStage: current.selectedStage || activeStages[0].id,
@@ -2436,6 +2477,14 @@ ${recommendations}`;
     window.setTimeout(() => {
       document.querySelector(".stagePanel")?.scrollIntoView({ block: "start", behavior: "auto" });
     }, 0);
+  }
+
+  function goToNextStage() {
+    if (!nextStage) {
+      return;
+    }
+
+    selectStage(nextStage.id);
   }
 
   function cyclePerformanceSignal(key: PerformanceKey) {
@@ -2541,12 +2590,7 @@ ${recommendations}`;
     }));
     setLastLiveStage(firstStage);
     setTagView("frequent");
-    setPerformance({
-      comprehension: 0,
-      autonomy: 0,
-      complexity: 0,
-      precision: 0,
-    });
+    setPerformance(createEmptyPerformance());
     setCopyStatus("");
   }
 
@@ -2830,6 +2874,54 @@ ${recommendations}`;
 
           {assessmentStarted ? (
             <>
+              {viewMode === "live" ? (
+                <section className="panel liveToolbar" aria-label="Commandes rapides pendant l'entretien">
+                  <div className="liveToolbarMain">
+                    <div>
+                      <p className="eyebrow">Mode entretien</p>
+                      <h2>
+                        {selectedStage.label} · {selectedStage.title}
+                      </h2>
+                      <p>{activeFramework.modeLabel} · {savedStatus}</p>
+                    </div>
+                    <div className="liveActions">
+                      <button className="secondaryButton" disabled={!nextStage} onClick={goToNextStage} type="button">
+                        Étape suivante
+                      </button>
+                      <button className="primaryButton" onClick={switchToFinalizeMode} type="button">
+                        Finaliser
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="stepProgress" aria-label="Progression de l'entretien">
+                    {activeStages.map((stage, index) => (
+                      <button
+                        aria-current={stage.id === selectedStage.id ? "step" : undefined}
+                        className={[
+                          "progressDot",
+                          stage.id === selectedStage.id ? "active" : "",
+                          index < liveStageIndex ? "complete" : "",
+                        ].join(" ")}
+                        key={stage.id}
+                        onClick={() => selectStage(stage.id)}
+                        title={stage.title}
+                        type="button"
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  <EvidenceSummaryStrip
+                    challengeTags={liveChallengeTags}
+                    performanceItems={livePerformanceSignals}
+                    strengthTags={liveStrengthTags}
+                    suggestedLevel={suggestedLevel}
+                  />
+                </section>
+              ) : null}
+
               <section className="panel stagePanel">
                 <div className="panelHeader">
                   <div>
@@ -2893,6 +2985,24 @@ ${recommendations}`;
                   ))}
                 </div>
               </section>
+
+              {viewMode === "finalize" ? (
+                <section className="panel evidenceSummaryPanel">
+                  <div className="panelHeader">
+                    <div>
+                      <p className="eyebrow">Avant la grille</p>
+                      <h2>Synthèse rapide des observations</h2>
+                      <p>Résumé automatique des tags et du fil conducteur pour guider la cotation finale.</p>
+                    </div>
+                  </div>
+                  <EvidenceSummaryStrip
+                    challengeTags={liveChallengeTags}
+                    performanceItems={livePerformanceSignals}
+                    strengthTags={liveStrengthTags}
+                    suggestedLevel={suggestedLevel}
+                  />
+                </section>
+              ) : null}
 
               <section className="panel ratingSection" aria-label={activeFramework.ratingAriaLabel}>
                 <div className="panelHeader">
@@ -3241,6 +3351,39 @@ ${recommendations}`;
   );
 }
 
+function EvidenceSummaryStrip({
+  challengeTags,
+  performanceItems,
+  strengthTags,
+  suggestedLevel,
+}: {
+  challengeTags: string[];
+  performanceItems: string[];
+  strengthTags: string[];
+  suggestedLevel: AssessmentLevel | "";
+}) {
+  return (
+    <div className="liveEvidenceStrip" aria-label="Synthèse automatique des observations">
+      <div>
+        <span>Forces</span>
+        <strong>{strengthTags.length ? strengthTags.join("; ") : "À documenter"}</strong>
+      </div>
+      <div>
+        <span>À surveiller</span>
+        <strong>{challengeTags.length ? challengeTags.join("; ") : "À documenter"}</strong>
+      </div>
+      <div>
+        <span>Fil conducteur</span>
+        <strong>{performanceItems.length ? performanceItems.join("; ") : "À confirmer"}</strong>
+      </div>
+      <div>
+        <span>Niveau suggéré</span>
+        <strong>{suggestedLevel || "Preuves insuffisantes"}</strong>
+      </div>
+    </div>
+  );
+}
+
 function EvaluatorGuidePage({ framework, onClose }: { framework: FrameworkConfig; onClose: () => void }) {
   return (
     <section className="guidePage panel" aria-label="Guide d'utilisation pour l'évaluateur">
@@ -3282,9 +3425,11 @@ function EvaluatorGuidePage({ framework, onClose }: { framework: FrameworkConfig
           <h3>Pendant l'entretien</h3>
           <ul>
             <li>Gardez les questions au centre de l'écran.</li>
+            <li>Utilisez Étape suivante pour avancer sans quitter la zone centrale.</li>
             <li>Cliquez les tags rapides seulement lorsqu'une preuve est observée.</li>
             <li>Cliquez une deuxième fois sur un tag pour marquer une preuve forte.</li>
             <li>Cliquez une troisième fois pour retirer le tag.</li>
+            <li>La sauvegarde automatique conserve le brouillon local pendant l'entretien.</li>
           </ul>
         </section>
 
