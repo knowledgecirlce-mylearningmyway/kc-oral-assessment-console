@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Clipboard, Clock, HelpCircle, Layers, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Clipboard, Clock, HelpCircle, Layers, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import "./styles.css";
 
 type FrameworkId = "cefr-ccc" | "pfl2-sle";
@@ -3237,9 +3237,20 @@ ${recommendations}`;
                     <p>Suggestion basée sur les observations sélectionnées. Le niveau final doit être confirmé par l'évaluateur ou l'évaluatrice.</p>
                   </div>
                   {coherenceAlert ? (
-                    <div className="coherenceAlert">
-                      <span>Cohérence à vérifier</span>
-                      <p>{coherenceAlert}</p>
+                    <div className="coherenceAlert" role="alert" aria-live="polite">
+                      <div className="coherenceAlertIcon" aria-hidden="true">
+                        <AlertTriangle size={20} strokeWidth={2.4} />
+                      </div>
+                      <div className="coherenceAlertContent">
+                        <span>Écart important détecté</span>
+                        <div className="coherenceLevelLine" aria-label="Écart entre le niveau suggéré et le niveau final choisi">
+                          <strong>Suggéré : {suggestedLevel || "à confirmer"}</strong>
+                          <b aria-hidden="true">→</b>
+                          <strong>Choisi : {session.ratings.finalLevel}</strong>
+                        </div>
+                        <p>{coherenceAlert}</p>
+                        <small>Si ce choix est volontaire, ajoutez une justification courte dans l'évaluation finale.</small>
+                      </div>
                     </div>
                   ) : null}
 

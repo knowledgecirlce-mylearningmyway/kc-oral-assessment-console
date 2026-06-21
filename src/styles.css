@@ -1901,25 +1901,78 @@ button:disabled {
 }
 
 .coherenceAlert {
-  padding: 10px;
-  border: 1px solid #f0d2a8;
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  overflow: hidden;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid #eba66c;
+  border-left: 6px solid #d96c23;
   border-radius: 10px;
-  background: #fffaf2;
+  background: linear-gradient(90deg, #fff4e8 0%, #fffaf5 100%);
+  box-shadow: 0 12px 24px rgba(154, 88, 30, 0.13);
+}
+
+.coherenceAlertIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: #ffead7;
+  color: #b94b19;
+}
+
+.coherenceAlertContent {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
 }
 
 .coherenceAlert span {
   display: block;
-  color: #9a581e;
-  font-size: 11px;
+  color: #87380f;
+  font-size: 12px;
   font-weight: 820;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
+.coherenceLevelLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.coherenceLevelLine strong {
+  border: 1px solid #eba66c;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #7c2d12;
+  padding: 5px 9px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.coherenceLevelLine b {
+  color: #b94b19;
+  font-size: 15px;
+  line-height: 1;
+}
+
 .coherenceAlert p {
-  margin: 6px 0 0;
-  color: #6b4a1f;
+  margin: 0;
+  color: #5f3b1e;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.coherenceAlert small {
+  color: #87380f;
   font-size: 11px;
+  font-weight: 700;
   line-height: 1.35;
 }
 
