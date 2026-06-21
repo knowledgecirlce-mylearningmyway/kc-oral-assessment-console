@@ -315,6 +315,130 @@ button:disabled {
   line-height: 1.35;
 }
 
+.evidenceReminderOverlay {
+  position: fixed;
+  inset: 72px 0 0;
+  z-index: 19;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 22px 16px;
+  background: rgba(245, 248, 252, 0.82);
+  backdrop-filter: blur(3px);
+}
+
+.evidenceReminderModal {
+  display: grid;
+  gap: 12px;
+  width: min(860px, 100%);
+  max-height: calc(100vh - 112px);
+  overflow: auto;
+  border: 1px solid #c9d9e7;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 16px;
+  box-shadow: 0 20px 48px rgba(31, 45, 67, 0.16);
+}
+
+.evidenceReminderHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.evidenceReminderHeader h2 {
+  margin: 2px 0 5px;
+  color: #1f2d43;
+  font-size: 19px;
+  line-height: 1.15;
+}
+
+.evidenceReminderHeader p:not(.eyebrow) {
+  max-width: 650px;
+  margin: 0;
+  color: #52606d;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.missingEvidenceList {
+  display: grid;
+  gap: 10px;
+}
+
+.missingEvidenceItem {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #dbe6ef;
+  border-radius: 9px;
+  background: #fbfdff;
+  padding: 10px;
+}
+
+.missingEvidenceItem h3 {
+  margin: 0;
+  color: #20364f;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.missingEvidenceItem p {
+  margin: 3px 0 0;
+  color: #607487;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.missingEvidenceItem.complete {
+  border-color: #b7dfc8;
+  background: #f4fbf6;
+}
+
+.missingEvidenceItem.hasEvidence {
+  border-color: #b7dfc8;
+  background: #f5fbf7;
+}
+
+.missingEvidenceItem.hasEvidence h3 {
+  color: #2f7a4e;
+}
+
+.missingEvidenceTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.evidenceReminderTag {
+  display: inline-grid;
+  gap: 2px;
+  justify-items: start;
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+
+.evidenceReminderTag small {
+  color: #718096;
+  font-size: 9px;
+  font-weight: 760;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.missingEvidenceEmpty {
+  width: 100%;
+}
+
+.evidenceReminderActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) minmax(330px, 370px);
@@ -1874,6 +1998,16 @@ button:disabled {
 
   .frameworkModalOverlay {
     inset: 112px 0 0;
+  }
+
+  .evidenceReminderOverlay {
+    inset: 112px 0 0;
+  }
+
+  .evidenceReminderHeader,
+  .evidenceReminderActions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .frameworkModal,

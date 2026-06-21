@@ -85,6 +85,10 @@ type CriterionSuggestion = {
   confidence: "low" | "medium" | "high";
   reasons: string[];
 };
+type MissingEvidenceCriterion = {
+  key: CriterionKey;
+  label: string;
+};
 type SuggestionRule = {
   tag: string;
   criteria: CriterionKey[];
@@ -2065,6 +2069,8 @@ function App() {
   const [savedStatus, setSavedStatus] = React.useState("Aucun brouillon local sauvegardé dans ce navigateur.");
   const [copyStatus, setCopyStatus] = React.useState("");
   const [showGuidePage, setShowGuidePage] = React.useState(false);
+  const [showEvidenceReminder, setShowEvidenceReminder] = React.useState(false);
+  const [evidenceReminderCriteria, setEvidenceReminderCriteria] = React.useState<MissingEvidenceCriterion[]>([]);
   const latestDraftRef = React.useRef({ session, performance });
 
   React.useEffect(() => {
@@ -2254,6 +2260,45 @@ function App() {
   const livePerformanceSignals = performanceSignals
     .filter(({ key }) => performance[key] !== 0)
     .map(({ key, label }) => `${label} : ${performanceLabels[performance[key]]}`);
+  const missingEvidenceCriteria = getMissingEvidenceCriteria();
+
+  function tagSupportsCriterion(tag: string, criterionKey: CriterionKey) {
+    return activeFramework.tagSuggestionRules.some(
+      (rule) => rule.tag === tag && rule.criteria.includes(criterionKey),
+    );
+  }
+
+  function criterionHasTagEvidence(criterionKey: CriterionKey) {
+    return activeTagEvidence.some(({ tag }) => tagSupportsCriterion(tag, criterionKey));
+  }
+
+  function getMissingEvidenceCriteria(): MissingEvidenceCriterion[] {
+    return activeCriteria
+      .filter(({ key }) => !criterionHasTagEvidence(key))
+      .map(({ key, label }) => ({ key, label }));
+  }
+
+  function getCriterionTagOptions(criterionKey: CriterionKey) {
+    const supportedTags = new Set(
+      activeFramework.tagSuggestionRules
+        .filter((rule) => rule.criteria.includes(criterionKey))
+        .map((rule) => rule.tag),
+    );
+    const seen = new Set<string>();
+
+    return activeQuickTagGroups.flatMap((group) =>
+      group.tags.flatMap((tag) => {
+        const optionKey = `${group.title}-${tag}`;
+
+        if (!supportedTags.has(tag) || seen.has(optionKey)) {
+          return [];
+        }
+
+        seen.add(optionKey);
+        return [{ group, tag }];
+      }),
+    );
+  }
 
   function saveDraft() {
     if (!frameworkChosen) {
@@ -2444,7 +2489,24 @@ ${recommendations}`;
     }));
   }
 
+  function requestFinalizeMode() {
+    if (missingEvidenceCriteria.length > 0) {
+      setEvidenceReminderCriteria(missingEvidenceCriteria);
+      setShowEvidenceReminder(true);
+      return;
+    }
+
+    switchToFinalizeMode();
+  }
+
+  function closeEvidenceReminder() {
+    setShowEvidenceReminder(false);
+    setEvidenceReminderCriteria([]);
+  }
+
   function switchToFinalizeMode() {
+    setShowEvidenceReminder(false);
+    setEvidenceReminderCriteria([]);
     setCandidatePanelOpen(false);
     setViewMode("finalize");
     setLastLiveStage((current) => (session.selectedStage === "final" ? current : session.selectedStage));
@@ -2687,6 +2749,92 @@ ${recommendations}`;
         </div>
       ) : null}
 
+      {showEvidenceReminder && !showGuidePage ? (
+        <div className="evidenceReminderOverlay" role="dialog" aria-modal="true" aria-labelledby="evidenceReminderTitle">
+          <section className="evidenceReminderModal">
+            <div className="evidenceReminderHeader">
+              <div>
+                <p className="eyebrow">Contrôle avant finalisation</p>
+                <h2 id="evidenceReminderTitle">Compléter les preuves par compétence</h2>
+                <p>
+                  Certaines compétences n'ont pas encore de tag associé. Ajoutez les tags utiles ci-dessous ou finalisez
+                  quand même si vos notes couvrent déjà ces éléments.
+                </p>
+              </div>
+              <button className="secondaryButton" onClick={closeEvidenceReminder} type="button">
+                Retour aux tags
+              </button>
+            </div>
+
+            <div className="missingEvidenceList">
+              {evidenceReminderCriteria.length ? (
+                evidenceReminderCriteria.map((criterion) => {
+                  const options = getCriterionTagOptions(criterion.key);
+                  const hasEvidence = criterionHasTagEvidence(criterion.key);
+
+                  return (
+                    <section className={hasEvidence ? "missingEvidenceItem hasEvidence" : "missingEvidenceItem"} key={criterion.key}>
+                      <div>
+                        <h3>{hasEvidence ? "Preuve ajoutée pour" : "Aucun tag pour"} {criterion.label}</h3>
+                        <p>
+                          Cliquez une fois pour ajouter, une deuxième fois pour marquer une preuve forte (+), une
+                          troisième fois pour retirer le tag.
+                        </p>
+                      </div>
+                      <div className="missingEvidenceTags">
+                        {options.length ? (
+                          options.slice(0, 10).map(({ group, tag }) => {
+                            const tagState = getTagState(group, tag);
+                            const active = tagState !== "inactive";
+
+                            return (
+                              <button
+                                aria-pressed={active}
+                                className={[
+                                  "tagButton",
+                                  "evidenceReminderTag",
+                                  active ? "active" : "",
+                                  tagState === "strong" ? "strong" : "",
+                                ].join(" ")}
+                                key={`${criterion.key}-${group.title}-${tag}`}
+                                onClick={() => toggleTag(group, tag)}
+                                type="button"
+                              >
+                                {getTagLabel(tag, activeFramework)}{tagState === "strong" ? " +" : ""}
+                                <small>{getGroupShortLabel(group)}</small>
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <p className="missingEvidenceEmpty">
+                            Aucun tag direct n'est configuré pour cette compétence. Utilisez vos notes ou le fil
+                            conducteur.
+                          </p>
+                        )}
+                      </div>
+                    </section>
+                  );
+                })
+              ) : (
+                <section className="missingEvidenceItem complete">
+                  <h3>Toutes les compétences ont au moins une preuve par tag.</h3>
+                  <p>Vous pouvez passer à la grille d'évaluation.</p>
+                </section>
+              )}
+            </div>
+
+            <div className="evidenceReminderActions">
+              <button className="secondaryButton" onClick={closeEvidenceReminder} type="button">
+                Continuer l'entretien
+              </button>
+              <button className="primaryButton" onClick={switchToFinalizeMode} type="button">
+                Finaliser quand même
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
       {showGuidePage ? (
         <main className="guidePageShell">
           <EvaluatorGuidePage framework={activeFramework} onClose={() => setShowGuidePage(false)} />
@@ -2767,7 +2915,7 @@ ${recommendations}`;
                     </button>
                     <button
                       className={viewMode === "finalize" ? "modeButton active" : "modeButton"}
-                      onClick={switchToFinalizeMode}
+                      onClick={requestFinalizeMode}
                       type="button"
                     >
                       Finaliser
@@ -2882,7 +3030,7 @@ ${recommendations}`;
                       <button className="secondaryButton" disabled={!nextStage} onClick={goToNextStage} type="button">
                         Étape suivante
                       </button>
-                      <button className="primaryButton" onClick={switchToFinalizeMode} type="button">
+                      <button className="primaryButton" onClick={requestFinalizeMode} type="button">
                         Finaliser
                       </button>
                     </div>
