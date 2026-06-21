@@ -2342,9 +2342,6 @@ function App() {
     const performanceSection = performanceLines
       ? `\nFil conducteur observé pendant l'entretien :\n${performanceLines}\n`
       : "";
-    const levelProfile = confirmedLevel
-      ? activeFramework.levelProfileLines[confirmedLevel] ?? ""
-      : activeFramework.unconfirmedLevelNote;
     const coherenceLine = coherenceAlert
       ? `\nPoint de cohérence à vérifier :\n${coherenceAlert}\n`
       : "";
@@ -2371,9 +2368,6 @@ ${session.candidate.evaluatorName || "[Nom de l'évaluateur ou de l'évaluatrice
 ${activeFramework.finalProfileLabel} :
 ${level}
 ${disclaimerLine}
-
-Lecture calibrée du niveau :
-${levelProfile}
 
 Observations par critère :
 ${criterionLines}
