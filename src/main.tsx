@@ -197,7 +197,7 @@ const performanceLabels: Record<PerformanceValue, string> = {
 const evaluatorGuideSteps = [
   "Remplir les renseignements, puis cliquer sur Passer à l'évaluation.",
   "Pendant l'entretien, suivre les étapes et cocher les tags rapides sans interrompre l'échange.",
-  "Utiliser le fil conducteur pour confirmer la compréhension, l'autonomie, la complexité et la précision.",
+  "Utiliser les repères d'observation pour confirmer la compréhension, l'autonomie, la complexité et la précision.",
   "Si l'approfondissement C apparaît, poser 1 ou 2 questions avancées et ajouter les tags C utiles.",
   "Après le départ de la personne candidate, cliquer sur Finaliser, confirmer ou modifier les niveaux CECR.",
   "Valider le niveau final, choisir une formulation, compléter l'évaluation finale et générer le résumé.",
@@ -2293,7 +2293,7 @@ const CEFR_CCC_CONFIG: FrameworkConfig = {
   ratingTitle: "Grille d'évaluation CECR / CEFR",
   ratingAriaLabel: "Grille d'évaluation CECR CEFR",
   ratingHelp:
-    "Les suggestions sont générées localement à partir des tags rapides et du fil conducteur. Elles doivent être confirmées ou modifiées par l'évaluateur.",
+    "Les suggestions sont générées localement à partir des tags rapides et des repères d'observation. Elles doivent être confirmées ou modifiées par l'évaluateur.",
   finalProfileLabel: "Profil d'interaction orale CECR/CEFR",
   summaryTitle: "Résumé CECR/CEFR généré",
   summaryButtonLabel: "Générer le résumé CECR",
@@ -2804,7 +2804,7 @@ function App() {
       .map(({ key, label }) => `- ${label} : ${performanceLabels[performance[key]]}`)
       .join("\n");
     const performanceSection = performanceLines
-      ? `\nFil conducteur observé pendant l'entretien :\n${performanceLines}\n`
+      ? `\nRepères d'observation pendant l'entretien :\n${performanceLines}\n`
       : "";
     const coherenceLine = coherenceAlert
       ? `\nPoint de cohérence à vérifier :\n${coherenceAlert}\n`
@@ -3553,7 +3553,7 @@ ${recommendations}`;
                     <div>
                       <p className="eyebrow">Avant la grille</p>
                       <h2>Synthèse rapide des observations</h2>
-                      <p>Résumé automatique des tags et du fil conducteur pour guider la cotation finale.</p>
+                      <p>Résumé automatique des tags et des repères d'observation pour guider la cotation finale.</p>
                     </div>
                   </div>
                   <EvidenceSummaryStrip
@@ -3635,7 +3635,7 @@ ${recommendations}`;
                         ) : (
                           <div className="criterionSuggestion empty">
                             <strong>Aucune suggestion</strong>
-                            <p>Ajoutez des tags ou utilisez le fil conducteur pour générer une piste.</p>
+                            <p>Ajoutez des tags ou utilisez les repères d'observation pour générer une piste.</p>
                           </div>
                         )}
                         <small>
@@ -3652,7 +3652,7 @@ ${recommendations}`;
                   <div className="suggestionBox">
                     <span>Niveau suggéré</span>
                     <strong>{suggestedLevel || "Cotes insuffisantes"}</strong>
-                    <p>{ratingSuggestedLevel ? "Niveau suggéré selon les cotes confirmées." : "Niveau suggéré à partir des tags rapides et du fil conducteur."} Le niveau final doit être confirmé par l'évaluateur ou l'évaluatrice.</p>
+                    <p>{ratingSuggestedLevel ? "Niveau suggéré selon les cotes confirmées." : "Niveau suggéré à partir des tags rapides et des repères d'observation."} Le niveau final doit être confirmé par l'évaluateur ou l'évaluatrice.</p>
                     <p>Suggestion basée sur les observations sélectionnées. Le niveau final doit être confirmé par l'évaluateur ou l'évaluatrice.</p>
                   </div>
                   {coherenceAlert ? (
@@ -3899,8 +3899,8 @@ ${recommendations}`;
               </div>
             )}
 
-            <section className="performanceRail" aria-label="Fil conducteur de performance">
-              <h3>Fil conducteur</h3>
+            <section className="performanceRail" aria-label="Repères d'observation de performance">
+              <h3>Repères d'observation</h3>
               <div className="signalGrid">
                 {performanceSignals.map((signal) => (
                   <button
@@ -3945,7 +3945,7 @@ function EvidenceSummaryStrip({
         <strong>{challengeTags.length ? challengeTags.join("; ") : "À documenter"}</strong>
       </div>
       <div>
-        <span>Fil conducteur</span>
+        <span>Repères d'observation</span>
         <strong>{performanceItems.length ? performanceItems.join("; ") : "À confirmer"}</strong>
       </div>
       <div>
@@ -3998,19 +3998,31 @@ function EvaluatorGuidePage({ framework, onClose }: { framework: FrameworkConfig
           <ul>
             <li>Gardez les questions au centre de l'écran.</li>
             <li>Utilisez Étape suivante pour avancer sans quitter la zone centrale.</li>
-            <li>Cliquez les tags rapides seulement lorsqu'une preuve est observée.</li>
-            <li>Cliquez une deuxième fois sur un tag pour marquer une preuve forte.</li>
-            <li>Cliquez une troisième fois pour retirer le tag.</li>
+            <li>Cliquez les tags rapides seulement lorsqu'une preuve précise est observée.</li>
+            <li>Utilisez les repères d'observation pour garder une lecture globale de la performance.</li>
             <li>La sauvegarde automatique conserve le brouillon local pendant l'entretien.</li>
           </ul>
         </section>
 
-        <section className="guideBlock">
-          <h3>Fil conducteur</h3>
+        <section className="guideBlock guideBlockWide">
+          <h3>Tags rapides et repères d'observation</h3>
           <ul>
-            <li>Utilisez-le pour garder une vue globale de la performance.</li>
+            <li><strong>Tags rapides</strong> : ils servent à consigner des preuves précises pendant que la personne candidate parle.</li>
+            <li>Les onglets <strong>Fréquents</strong>, <strong>Global</strong>, <strong>À améliorer</strong>, <strong>Forces</strong> et <strong>Exemples</strong> permettent de retrouver rapidement le bon type de preuve.</li>
+            <li>Un tag choisi alimente les notes structurées correspondantes : observations générales, forces, défis, erreurs précises ou exemples de performance forte.</li>
+            <li>Cliquez une fois pour ajouter le tag, une deuxième fois pour marquer une preuve forte, une troisième fois pour le retirer.</li>
+            <li><strong>Repères d'observation</strong> : ils ne remplacent pas les tags; ils donnent une lecture globale de la compréhension, de l'autonomie, de la complexité et de la précision.</li>
+            <li>Utilisez les repères quand vous observez une tendance générale sur plusieurs réponses, pas pour noter un seul mot ou une seule erreur.</li>
+            <li>Les deux éléments se complètent : les tags documentent les preuves; les repères aident à orienter la suggestion de niveau.</li>
+          </ul>
+        </section>
+
+        <section className="guideBlock">
+          <h3>Repères d'observation</h3>
+          <ul>
+            <li>Utilisez-les pour garder une vue globale de la performance.</li>
             <li>Solide partout ne donne pas automatiquement le niveau le plus élevé.</li>
-            <li>Il sert à déclencher une vérification, pas à remplacer l'évaluateur.</li>
+            <li>Ils servent à déclencher une vérification, pas à remplacer l'évaluateur.</li>
           </ul>
         </section>
 
@@ -4396,7 +4408,7 @@ function getJudgmentPhraseOptions(
       id: "fragile-signals",
       category: "Prudence",
       title: "Performance variable",
-      text: `La performance doit être interprétée avec prudence, car le fil conducteur indique une fragilité en ${fragileSignals.join(
+      text: `La performance doit être interprétée avec prudence, car les repères d'observation indiquent une fragilité en ${fragileSignals.join(
         ", ",
       )}.`,
     });
