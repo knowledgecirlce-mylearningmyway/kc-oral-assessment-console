@@ -766,6 +766,135 @@ const judgmentPhraseTemplates: Record<"emerging" | "functional" | "autonomous" |
   ],
 };
 
+const pfl2JudgmentPhraseTemplates: Record<SLELevel, JudgmentPhrase[]> = {
+  "A-": [
+    {
+      id: "pfl2-a-minus-conclusion",
+      category: "Conclusion",
+      title: "A- - Pré-OF01",
+      text: "La performance observée correspond à un profil A- en interaction orale, soit un profil pré-OF01 / très grand débutant. La personne candidate dispose de très peu de français fonctionnel et ne peut pas encore soutenir un échange oral simple de façon autonome.",
+    },
+    {
+      id: "pfl2-a-minus-professional",
+      category: "Contexte professionnel",
+      title: "Autonomie très limitée",
+      text: "En contexte professionnel, la communication reste limitée à quelques mots isolés, expressions mémorisées ou réponses très courtes, avec un soutien important de l'interlocuteur.",
+    },
+  ],
+  A: [
+    {
+      id: "pfl2-a-conclusion",
+      category: "Conclusion",
+      title: "A - OF01-OF12",
+      text: "La performance observée correspond à un profil A, approximativement dans la zone OF01-OF12 du curriculum PFL2. La personne candidate peut répondre à des questions très simples et donner des informations personnelles ou professionnelles de base avec soutien.",
+    },
+    {
+      id: "pfl2-a-professional",
+      category: "Contexte professionnel",
+      title: "Échanges très simples",
+      text: "La communication professionnelle est possible seulement dans des situations très familières, avec des phrases courtes, des questions directes et des relances fréquentes.",
+    },
+  ],
+  "A+": [
+    {
+      id: "pfl2-a-plus-conclusion",
+      category: "Conclusion",
+      title: "A+ - OF13-OF40 / pré-B",
+      text: "La performance observée correspond à un profil A+, approximativement dans la zone OF13-OF40 / pré-B. La personne candidate progresse vers les fonctions nécessaires au niveau B, mais n'est pas encore un B fonctionnel stable.",
+    },
+    {
+      id: "pfl2-a-plus-prudence",
+      category: "Prudence",
+      title: "OF40 n'est pas B",
+      text: "Même lorsque certaines fonctions de préparation au B apparaissent, OF40 doit être interprété comme A+ / pré-B et non comme B-, B ou B+. Le niveau B exige une performance fonctionnelle plus stable.",
+    },
+  ],
+  "B-": [
+    {
+      id: "pfl2-b-minus-conclusion",
+      category: "Conclusion",
+      title: "B- - Proche B instable",
+      text: "La performance observée correspond à un profil B-. La personne candidate démontre plusieurs comportements associés au niveau B, mais la performance n'est pas encore suffisamment stable pour confirmer un B fonctionnel.",
+    },
+    {
+      id: "pfl2-b-minus-prudence",
+      category: "Prudence",
+      title: "Stabilité à confirmer",
+      text: "La fluidité, la précision, le vocabulaire ou l'autonomie restent irréguliers lorsque la personne candidate doit développer ses idées, justifier ou répondre à des relances moins prévisibles.",
+    },
+  ],
+  B: [
+    {
+      id: "pfl2-b-conclusion",
+      category: "Conclusion",
+      title: "B - Fonctionnel",
+      text: "La performance observée correspond à un niveau B fonctionnel. La personne candidate peut communiquer en français dans des situations professionnelles familières, décrire, expliquer, raconter des événements passés, comparer des options simples et justifier une opinion de base.",
+    },
+    {
+      id: "pfl2-b-professional",
+      category: "Contexte professionnel",
+      title: "Communication professionnelle familière",
+      text: "Les erreurs sont présentes, mais elles ne bloquent généralement pas la communication lorsque les sujets demeurent familiers et que la tâche reste fonctionnelle.",
+    },
+  ],
+  "B+": [
+    {
+      id: "pfl2-b-plus-conclusion",
+      category: "Conclusion",
+      title: "B+ - B solide",
+      text: "La performance observée correspond à un profil B+ : un B très solide avec certaines habiletés émergentes du niveau C. La personne candidate peut organiser ses idées, justifier des recommandations et répondre à des relances avec une autonomie croissante.",
+    },
+    {
+      id: "pfl2-b-plus-nuance",
+      category: "Nuance",
+      title: "Transition vers C",
+      text: "Le profil n'est pas encore stable au niveau C lorsque les discussions deviennent abstraites, nuancées ou moins prévisibles; ces limites doivent être précisées dans l'évaluation finale.",
+    },
+  ],
+  "C-": [
+    {
+      id: "pfl2-c-minus-conclusion",
+      category: "Conclusion",
+      title: "C- - Proche C instable",
+      text: "La performance observée correspond à un profil C-. La personne candidate approche le niveau C et peut traiter des sujets plus complexes, mais la performance demeure instable dans la nuance, la précision, la spontanéité ou la structure.",
+    },
+    {
+      id: "pfl2-c-minus-prudence",
+      category: "Prudence",
+      title: "C non confirmé",
+      text: "Le niveau C ne devrait pas être confirmé si les réponses complexes ou abstraites restent irrégulières, peu nuancées ou trop dépendantes des relances de l'évaluateur.",
+    },
+  ],
+  C: [
+    {
+      id: "pfl2-c-conclusion",
+      category: "Conclusion",
+      title: "C - Fonctionnel",
+      text: "La performance observée correspond à un niveau C fonctionnel. La personne candidate communique efficacement et avec autonomie dans une grande variété de situations professionnelles, y compris des questions hypothétiques, abstraites ou complexes.",
+    },
+    {
+      id: "pfl2-c-professional",
+      category: "Contexte professionnel",
+      title: "Discussion complexe",
+      text: "La personne candidate peut expliquer, comparer, justifier, formuler des hypothèses, discuter d'enjeux abstraits et répondre spontanément aux questions de suivi.",
+    },
+  ],
+  "C+": [
+    {
+      id: "pfl2-c-plus-conclusion",
+      category: "Conclusion",
+      title: "C+ - Avancé",
+      text: "La performance observée correspond à un profil C+ : un C solide / avancé. La personne candidate dépasse le niveau C attendu par son aisance, sa précision, sa nuance et son autonomie dans des contextes professionnels et abstraits.",
+    },
+    {
+      id: "pfl2-c-plus-professional",
+      category: "Contexte professionnel",
+      title: "Communication avancée stable",
+      text: "Les erreurs sont rares et ne nuisent pas à l'efficacité de la communication. La personne candidate maintient un discours précis, souple et nuancé même dans les tâches complexes.",
+    },
+  ],
+};
+
 const recommendationTemplates: Record<string, string[]> = {
   "A1/A2": [
     "Développer les bases de l'interaction orale : se présenter, répondre à des questions simples et demander de répéter.",
@@ -3974,6 +4103,10 @@ function getJudgmentPhraseOptions(
   config: FrameworkConfig,
 ): JudgmentPhrase[] {
   const band = getJudgmentLevelBand(level, config);
+  const basePhrases =
+    config.id === "pfl2-sle" && isFrameworkLevel(level, config)
+      ? pfl2JudgmentPhraseTemplates[level as SLELevel]
+      : judgmentPhraseTemplates[band];
   const observedTags = activeTags.map(({ tag }) => tag);
   const challengeTags = activeTags
     .filter(({ group }) => group.tone === "challenge")
@@ -3991,7 +4124,7 @@ function getJudgmentPhraseOptions(
     .map(({ label }) => label.toLowerCase());
 
   const phrases: JudgmentPhrase[] = [
-    ...judgmentPhraseTemplates[band],
+    ...basePhrases,
     {
       id: "evidence-base",
       category: "Preuves",
