@@ -5,7 +5,7 @@ import "./styles.css";
 
 type FrameworkId = "cefr-ccc" | "pfl2-sle";
 type CEFRLevel = "A1" | "A2" | "B1" | "B1+" | "B2" | "B2+" | "C1" | "C1+" | "C2";
-type SLELevel = "Inférieur à B" | "B-" | "B" | "B+" | "C-" | "C" | "C+";
+type SLELevel = "A-" | "A" | "A+" | "B-" | "B" | "B+" | "C-" | "C" | "C+";
 type AssessmentLevel = CEFRLevel | SLELevel;
 
 interface CandidateInfo {
@@ -1381,12 +1381,14 @@ const noteFields: NoteField[] = [
   },
 ];
 
-const sleLevels: SLELevel[] = ["Inférieur à B", "B-", "B", "B+", "C-", "C", "C+"];
+const sleLevels: SLELevel[] = ["A-", "A", "A+", "B-", "B", "B+", "C-", "C", "C+"];
 
 const sleLevelValues: Record<string, number> = {
-  "Inférieur à B": 2,
-  "B-": 2.7,
-  B: 3.4,
+  "A-": 1.6,
+  A: 2,
+  "A+": 2.65,
+  "B-": 3.15,
+  B: 3.55,
   "B+": 4.1,
   "C-": 4.7,
   C: 5.25,
@@ -1405,20 +1407,24 @@ const sleCriteria: { key: CriterionKey; label: string }[] = [
 ];
 
 const sleLevelDescriptors: Record<SLELevel, string> = {
-  "Inférieur à B":
-    "Réponses limitées et souvent courtes. La personne candidate dépend fortement des relances; les erreurs peuvent nuire à la compréhension.",
+  "A-":
+    "Pré-OF01 / très grand débutant. La personne est en dessous du point d'entrée OF01, utilise surtout des mots isolés ou des phrases mémorisées, et ne peut pas encore soutenir un échange oral simple de façon autonome.",
+  A:
+    "OF01-OF12 environ. La personne est dans la zone débutante du curriculum PFL2; elle peut répondre à des questions très simples, donner des informations de base et utiliser des phrases courtes avec soutien.",
+  "A+":
+    "OF13-OF40 environ / pré-B. La personne dépasse le tout débutant et progresse vers les fonctions nécessaires au niveau B, mais n'est pas encore un B fonctionnel stable, surtout pour développer, justifier ou répondre à des relances moins prévisibles.",
   "B-":
-    "Profil proche du niveau B, mais fragile. La communication est possible sur des sujets familiers avec hésitations, vocabulaire limité et soutien fréquent.",
+    "Proche du niveau B, mais encore instable. La personne peut communiquer sur des sujets professionnels familiers, expliquer des situations simples et répondre à certaines relances, mais sans stabilité suffisante.",
   B:
-    "Communication fonctionnelle sur des sujets professionnels familiers. Peut décrire, expliquer simplement et répondre à des relances prévisibles.",
+    "Niveau B fonctionnel. La personne peut décrire, expliquer, raconter des événements passés, comparer des options simples et justifier une opinion de base.",
   "B+":
-    "Niveau B solide. Peut développer davantage ses idées, justifier certaines opinions et maintenir l'échange avec une autonomie croissante.",
+    "B solide / transition vers C. La personne organise ses idées, justifie des recommandations, répond aux relances et gère une certaine complexité, sans stabilité C complète.",
   "C-":
-    "Profil proche du niveau C, mais encore instable. Peut traiter des sujets plus complexes, avec des limites de précision, structure ou spontanéité.",
+    "Proche du niveau C, mais instable. La personne peut traiter des sujets plus complexes et soutenir des opinions, mais manque parfois de nuance, de précision, de spontanéité ou de structure.",
   C:
-    "Communication aisée et efficace dans des situations professionnelles variées. Peut expliquer, comparer, justifier, nuancer et soutenir une discussion complexe.",
+    "Niveau C fonctionnel. La personne communique efficacement et avec autonomie dans une grande variété de situations professionnelles, y compris des questions hypothétiques, abstraites ou complexes.",
   "C+":
-    "Performance supérieure au niveau C attendu, avec grande aisance, précision et nuance sur des sujets complexes ou abstraits.",
+    "C solide / avancé. La personne communique avec aisance, précision, nuance et autonomie dans des contextes professionnels et abstraits; les erreurs sont rares et ne nuisent pas à l'efficacité.",
 };
 
 const sleDescriptors: FrameworkConfig["descriptors"] = {
@@ -1434,27 +1440,36 @@ const sleDescriptors: FrameworkConfig["descriptors"] = {
 };
 
 const sleReportTemplates: Partial<Record<AssessmentLevel, string>> = {
-  "Inférieur à B":
-    "La personne candidate peut répondre à certaines questions simples, mais la communication reste limitée. Les réponses sont souvent courtes, dépendantes des relances, et les erreurs nuisent parfois à la compréhension.",
+  "A-":
+    "La personne candidate présente un profil A- en interaction orale, correspondant à un pré-OF01 / très grand débutant. Elle a très peu de français fonctionnel, utilise surtout des mots isolés ou des phrases mémorisées, et ne peut pas encore soutenir un échange oral simple de façon autonome.",
+  A:
+    "La personne candidate présente un profil A en interaction orale, correspondant approximativement à la zone OF01-OF12 du curriculum PFL2. Elle peut répondre à des questions très simples, donner des informations personnelles ou professionnelles de base et utiliser des phrases courtes avec soutien.",
+  "A+":
+    "La personne candidate présente un profil A+ en interaction orale, correspondant approximativement à la zone OF13-OF40 du curriculum PFL2 / pré-B. Elle progresse vers les fonctions nécessaires au niveau B, mais n'est pas encore un B fonctionnel stable, surtout lorsqu'il faut développer, justifier ou répondre à des relances moins prévisibles.",
   "B-":
-    "La personne candidate approche le niveau B, mais la performance demeure fragile. Elle peut communiquer sur des sujets familiers, avec des hésitations, des limites de vocabulaire et un besoin fréquent de soutien.",
+    "La personne candidate est proche du niveau B, mais la performance demeure instable. Elle peut communiquer sur des sujets professionnels familiers, expliquer des situations simples et répondre à certaines relances, mais la fluidité, la précision, le vocabulaire ou l'autonomie restent insuffisants pour confirmer un B stable.",
   B:
-    "La personne candidate peut communiquer de façon fonctionnelle sur des sujets professionnels familiers. Elle peut décrire, expliquer simplement et répondre à des questions de suivi prévisibles. Les erreurs sont présentes, mais le message principal demeure compréhensible.",
+    "La personne candidate présente un niveau B fonctionnel. Elle peut communiquer de façon fonctionnelle en français dans des situations professionnelles familières, décrire, expliquer, raconter des événements passés, comparer des options simples et justifier une opinion de base.",
   "B+":
-    "La personne candidate démontre un niveau B solide et s'approche parfois du niveau C. Elle peut développer davantage ses idées, justifier certaines opinions et maintenir l'échange avec une autonomie croissante, mais la complexité et la nuance demeurent limitées.",
+    "La personne candidate démontre un B solide et une transition possible vers C. Elle peut organiser ses idées, justifier des recommandations, répondre à des relances et gérer une certaine complexité, mais elle n'est pas encore stable dans les discussions abstraites ou nuancées.",
   "C-":
-    "La personne candidate approche le niveau C, mais la performance n'est pas encore stable. Elle peut traiter des sujets plus complexes et donner des opinions, mais manque parfois de précision, de structure ou de spontanéité dans les réponses plus abstraites.",
+    "La personne candidate approche le niveau C, mais la performance n'est pas encore stable. Elle peut traiter des sujets plus complexes, expliquer des enjeux et soutenir des opinions, mais manque parfois de nuance, de précision, de spontanéité ou de structure.",
   C:
-    "La personne candidate peut communiquer avec aisance et efficacité dans des situations professionnelles variées. Elle peut expliquer, comparer, justifier, nuancer et soutenir une discussion sur des sujets complexes avec un bon degré d'autonomie.",
+    "La personne candidate présente un niveau C fonctionnel. Elle communique efficacement et avec autonomie dans une grande variété de situations professionnelles, explique, compare, justifie, formule des hypothèses, discute d'enjeux abstraits et répond spontanément aux questions de suivi.",
   "C+":
-    "La personne candidate démontre une performance supérieure au niveau C attendu. Elle communique avec grande aisance, précision et nuance, même sur des sujets complexes ou abstraits. Les erreurs sont rares et ne nuisent pas à la communication.",
+    "La personne candidate démontre un C solide / avancé. Elle communique avec aisance, précision, nuance et autonomie dans des contextes professionnels et abstraits. Les erreurs sont rares et ne nuisent pas à l'efficacité de la communication.",
 };
 
 const sleRecommendationTemplates: Record<string, string[]> = {
-  "Inférieur à B/B-": [
+  "A-/A/A+": [
+    "Consolider les objectifs de base du curriculum PFL2 : compréhension de questions simples, réponses courtes complètes, présentation du rôle et vocabulaire professionnel de base.",
+    "Développer la capacité à parler de routines, de tâches familières et de situations très connues avec moins de soutien.",
+    "Renforcer la construction de phrases simples, les temps essentiels et les stratégies pour demander une clarification.",
+  ],
+  "B-": [
     "Renforcer les bases de l'interaction orale professionnelle : comprendre les questions, répondre avec des phrases complètes et demander une clarification.",
-    "Développer le vocabulaire lié au poste, aux responsabilités et aux situations de travail courantes.",
-    "Pratiquer la narration simple au passé et l'explication d'étapes professionnelles familières.",
+    "Travailler les fonctions de stabilisation du niveau B : expliquer une situation, raconter un événement passé, organiser les idées et donner des raisons simples.",
+    "Stabiliser la fluidité, la précision grammaticale, le vocabulaire et l'autonomie avant de confirmer un B fonctionnel.",
   ],
   "B/B+": [
     "Consolider la communication fonctionnelle sur des sujets professionnels familiers.",
@@ -1900,9 +1915,9 @@ const CEFR_CCC_CONFIG: FrameworkConfig = {
 
 const PFL2_SLE_CONFIG: FrameworkConfig = {
   id: "pfl2-sle",
-  selectorLabel: "PFL2 / SLE – B-C",
-  modeLabel: "PFL2 / SLE – B-C",
-  appTitle: "Console d'évaluation orale KC - PFL2/SLE B-C",
+  selectorLabel: "PFL2 / SLE – A-C",
+  modeLabel: "PFL2 / SLE – A-C",
+  appTitle: "Console d'évaluation orale KC - PFL2/SLE A-C",
   defaultClient: "PFL2 / SLE",
   ratingTitle: "Grille d'évaluation PFL2 / SLE",
   ratingAriaLabel: "Grille d'évaluation PFL2 SLE",
@@ -1931,9 +1946,9 @@ const PFL2_SLE_CONFIG: FrameworkConfig = {
   performanceSuggestionRules: slePerformanceSuggestionRules,
   cProbeQuestions: [],
   guideSteps: [
-    "Choisir le mode PFL2 / SLE – B-C dans l'en-tête avant de commencer.",
+    "Choisir le mode PFL2 / SLE – A-C dans l'en-tête avant de commencer.",
     "Entrer les renseignements de départ, puis passer en mode évaluation.",
-    "Utiliser les étapes 1 à 6 pour recueillir les preuves du niveau B ou C.",
+    "Utiliser les étapes 1 à 6 pour situer la performance entre A-, A, A+, B et C. La zone A+ correspond à OF13-OF40 / pré-B; OF40 n'est pas traité comme B.",
     "Activer l'extension niveau C seulement si la personne candidate montre des preuves solides au-dessus de B.",
     "Après le départ de la personne candidate, cliquer sur Finaliser, confirmer ou modifier les niveaux PFL2/SLE.",
     "Choisir ou adapter une formulation dans la banque, puis générer le résumé interne.",
@@ -2740,7 +2755,7 @@ ${recommendations}`;
                   <span>
                     {config.id === "cefr-ccc"
                       ? "Rapport CCC avec niveaux CECR/CEFR."
-                      : "Profil interne PFL2 / SLE avec niveaux B-C."}
+                      : "Profil interne PFL2 / SLE avec niveaux A-C."}
                   </span>
                 </button>
               ))}
@@ -3568,7 +3583,7 @@ function EvaluatorGuidePage({ framework, onClose }: { framework: FrameworkConfig
           <h3>Choix du cadre</h3>
           <ul>
             <li><strong>CCC – CECR/CEFR</strong> : utilisez ce cadre pour les évaluations CCC et les rapports avec niveaux CECR/CEFR.</li>
-            <li><strong>PFL2 / SLE – B-C</strong> : utilisez ce cadre pour une estimation interne PFL2/SLE avec niveaux Inférieur à B, B-, B, B+, C-, C et C+.</li>
+            <li><strong>PFL2 / SLE – A-C</strong> : utilisez ce cadre pour une estimation interne PFL2/SLE avec niveaux A-, A, A+, B-, B, B+, C-, C et C+. La zone A+ correspond à OF13-OF40 / pré-B; OF40 n'est pas traité comme B.</li>
             <li>Le choix du cadre change les étapes, les questions, les critères, les niveaux, les tags rapides et le libellé du résumé généré.</li>
             <li>Le cadre doit être choisi avant de commencer l'entretien afin d'éviter de mélanger les preuves et les niveaux.</li>
           </ul>
@@ -3817,8 +3832,10 @@ function getLevelFromEvidenceScore(score: number, config: FrameworkConfig): Asse
     return "C2";
   }
 
-  if (score < 2.7) return "Inférieur à B";
-  if (score < 3.25) return "B-";
+  if (score < 1.9) return "A-";
+  if (score < 2.35) return "A";
+  if (score < 3.1) return "A+";
+  if (score < 3.35) return "B-";
   if (score < 3.85) return "B";
   if (score < 4.45) return "B+";
   if (score < 5.05) return "C-";
@@ -4003,7 +4020,7 @@ function getJudgmentLevelBand(level: string, config: FrameworkConfig): "emerging
     return "functional";
   }
 
-  if (level === "A1" || level === "A2" || level === "Inférieur à B") {
+  if (level === "A1" || level === "A2" || level === "A-" || level === "A" || level === "A+") {
     return "emerging";
   }
 
@@ -4029,7 +4046,8 @@ function getRecommendations(level: string, config: FrameworkConfig): string[] {
   if (config.id === "pfl2-sle") {
     if (level === "C-" || level === "C" || level === "C+") return config.recommendationTemplates["C-/C/C+"];
     if (level === "B" || level === "B+") return config.recommendationTemplates["B/B+"];
-    return config.recommendationTemplates["Inférieur à B/B-"];
+    if (level === "B-") return config.recommendationTemplates["B-"];
+    return config.recommendationTemplates["A-/A/A+"];
   }
 
   if (level === "C2") return config.recommendationTemplates.C2;
@@ -4064,6 +4082,22 @@ function getCoherenceAlert(level: string, suggestedLevel: AssessmentLevel | "", 
   return "";
 }
 
+function normalizeStoredLevel(value: string, config: FrameworkConfig): AssessmentLevel | "" {
+  if (config.id === "pfl2-sle") {
+    const legacySleLevels: Record<string, SLELevel> = {
+      ["Inf\u00e9rieur \u00e0 B"]: "A-",
+      ["Niveau A"]: "A",
+      ["Pr\u00e9-B"]: "A+",
+    };
+
+    if (legacySleLevels[value]) {
+      return legacySleLevels[value];
+    }
+  }
+
+  return isFrameworkLevel(value, config) ? value : "";
+}
+
 function normalizeSession(draft: Partial<OralAssessmentSession>): OralAssessmentSession {
   const frameworkId: FrameworkId =
     draft.frameworkId && frameworkConfigs[draft.frameworkId] ? draft.frameworkId : "cefr-ccc";
@@ -4076,8 +4110,8 @@ function normalizeSession(draft: Partial<OralAssessmentSession>): OralAssessment
   (Object.keys(ratings) as (keyof CriterionRating)[]).forEach((key) => {
     const value = ratings[key];
 
-    if (value && !isFrameworkLevel(value, config)) {
-      ratings[key] = "";
+    if (value) {
+      ratings[key] = normalizeStoredLevel(value, config);
     }
   });
 
