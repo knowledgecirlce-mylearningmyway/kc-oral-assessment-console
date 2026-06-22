@@ -205,6 +205,24 @@ const evaluatorGuideSteps = [
 
 const tagSuggestionRules: SuggestionRule[] = [
   {
+    tag: "mots isolés",
+    criteria: ["fluency", "vocabulary", "interaction"],
+    score: 1.35,
+    reason: "mots isolés",
+  },
+  {
+    tag: "phrases mémorisées",
+    criteria: ["fluency", "grammar", "coherence"],
+    score: 1.55,
+    reason: "phrases mémorisées",
+  },
+  {
+    tag: "réponses non autonomes",
+    criteria: ["interaction", "fluency", "coherence"],
+    score: 1.6,
+    reason: "réponses non autonomes",
+  },
+  {
     tag: "réponses très courtes",
     criteria: ["fluency", "coherence"],
     score: 1.8,
@@ -281,6 +299,24 @@ const tagSuggestionRules: SuggestionRule[] = [
     criteria: ["interaction", "fluency", "coherence"],
     score: 3.2,
     reason: "communication fonctionnelle",
+  },
+  {
+    tag: "explication simple mais inégale",
+    criteria: ["coherence", "fluency"],
+    score: 3.45,
+    reason: "explication simple mais inégale",
+  },
+  {
+    tag: "justification de base",
+    criteria: ["coherence", "interaction"],
+    score: 3.5,
+    reason: "justification de base",
+  },
+  {
+    tag: "autonomie partielle",
+    criteria: ["interaction", "fluency"],
+    score: 3.55,
+    reason: "autonomie partielle",
   },
   {
     tag: "bonne autonomie dans l'échange",
@@ -481,6 +517,24 @@ const tagSuggestionRules: SuggestionRule[] = [
     reason: "argumentation nuancée",
   },
   {
+    tag: "nuance soutenue",
+    criteria: ["coherence", "interaction", "vocabulary"],
+    score: 5.45,
+    reason: "nuance soutenue",
+  },
+  {
+    tag: "souplesse discursive",
+    criteria: ["fluency", "coherence", "interaction"],
+    score: 5.5,
+    reason: "souplesse discursive",
+  },
+  {
+    tag: "précision soutenue",
+    criteria: ["grammar", "vocabulary"],
+    score: 5.55,
+    reason: "précision soutenue",
+  },
+  {
     tag: "registre adapté au niveau exécutif",
     criteria: ["interaction", "vocabulary"],
     score: 5.2,
@@ -503,6 +557,24 @@ const tagSuggestionRules: SuggestionRule[] = [
     criteria: ["vocabulary"],
     score: 5.3,
     reason: "vocabulaire spécialisé précis",
+  },
+  {
+    tag: "maîtrise exceptionnelle",
+    criteria: ["fluency", "grammar", "vocabulary", "coherence"],
+    score: 5.85,
+    reason: "maîtrise exceptionnelle",
+  },
+  {
+    tag: "aisance quasi native",
+    criteria: ["fluency", "pronunciation", "interaction"],
+    score: 5.8,
+    reason: "aisance quasi native",
+  },
+  {
+    tag: "nuance constante exceptionnelle",
+    criteria: ["coherence", "interaction", "vocabulary"],
+    score: 5.9,
+    reason: "nuance constante exceptionnelle",
   },
   {
     tag: "nuance limitée pour le niveau C",
@@ -762,6 +834,135 @@ const judgmentPhraseTemplates: Record<"emerging" | "functional" | "autonomous" |
       category: "Contexte professionnel",
       title: "Communication complexe",
       text: "La performance permet de traiter des sujets professionnels complexes, de nuancer les recommandations et de maintenir une interaction efficace dans des situations moins prévisibles.",
+    },
+  ],
+};
+
+const cefrJudgmentPhraseTemplates: Record<CEFRLevel, JudgmentPhrase[]> = {
+  A1: [
+    {
+      id: "cefr-a1-conclusion",
+      category: "Conclusion",
+      title: "A1 - Grand débutant",
+      text: "La performance observée correspond à un profil A1 en interaction orale. La personne candidate peut répondre à quelques questions très simples avec un soutien important, mais l'échange autonome demeure très limité.",
+    },
+    {
+      id: "cefr-a1-professional",
+      category: "Contexte professionnel",
+      title: "Communication très limitée",
+      text: "En contexte professionnel, les réponses sont souvent constituées de mots isolés, d'expressions mémorisées ou de phrases très courtes. Les erreurs et la compréhension limitée restreignent fortement la communication.",
+    },
+  ],
+  A2: [
+    {
+      id: "cefr-a2-conclusion",
+      category: "Conclusion",
+      title: "A2 - Élémentaire",
+      text: "La performance observée correspond à un profil A2. La personne candidate peut gérer des échanges oraux très simples et familiers avec soutien, surtout lorsque les questions sont directes et concrètes.",
+    },
+    {
+      id: "cefr-a2-professional",
+      category: "Contexte professionnel",
+      title: "Besoins immédiats",
+      text: "La communication professionnelle demeure limitée aux informations de base, aux tâches familières et aux besoins immédiats. Les explications, justifications et relances spontanées exigent encore beaucoup de soutien.",
+    },
+  ],
+  B1: [
+    {
+      id: "cefr-b1-conclusion",
+      category: "Conclusion",
+      title: "B1 - Fonctionnel limité",
+      text: "La performance observée correspond à un profil B1. La personne candidate peut communiquer sur des sujets professionnels familiers et fournir des explications de base, mais les réponses demeurent souvent simples et nécessitent parfois des relances.",
+    },
+    {
+      id: "cefr-b1-professional",
+      category: "Contexte professionnel",
+      title: "Sujets familiers",
+      text: "L'interaction est généralement possible lorsque le contexte est familier. Les limites apparaissent davantage lorsque la tâche exige précision, développement, comparaison ou adaptation spontanée.",
+    },
+  ],
+  "B1+": [
+    {
+      id: "cefr-b1-plus-conclusion",
+      category: "Conclusion",
+      title: "B1+ - En consolidation",
+      text: "La performance observée correspond à un profil B1+. La personne candidate démontre une capacité fonctionnelle en français dans des contextes professionnels familiers, mais la performance n'est pas encore stable au niveau B2.",
+    },
+    {
+      id: "cefr-b1-plus-nuance",
+      category: "Nuance",
+      title: "Fonctionnel mais instable",
+      text: "La personne candidate peut expliquer des situations et fournir une justification de base, mais la fluidité, la précision lexicale ou grammaticale et le développement des idées demeurent inégaux lorsque la tâche devient plus complexe.",
+    },
+  ],
+  B2: [
+    {
+      id: "cefr-b2-conclusion",
+      category: "Conclusion",
+      title: "B2 - Autonome",
+      text: "La performance observée correspond à un profil B2. La personne candidate peut communiquer efficacement dans un contexte professionnel, expliquer des processus, comparer des options et justifier des recommandations avec une clarté raisonnable.",
+    },
+    {
+      id: "cefr-b2-professional",
+      category: "Contexte professionnel",
+      title: "Interaction professionnelle claire",
+      text: "La communication est généralement autonome et fonctionnelle. Certaines erreurs peuvent survenir, mais elles ne nuisent généralement pas à la compréhension ou au maintien de l'interaction.",
+    },
+  ],
+  "B2+": [
+    {
+      id: "cefr-b2-plus-conclusion",
+      category: "Conclusion",
+      title: "B2+ - Autonome solide",
+      text: "La performance observée correspond à un profil B2+. La personne candidate démontre une communication généralement efficace et structurée, avec une bonne capacité à développer, comparer et justifier dans des situations professionnelles.",
+    },
+    {
+      id: "cefr-b2-plus-nuance",
+      category: "Nuance",
+      title: "Proche du C1",
+      text: "Le profil s'approche du C1 dans certains aspects, mais certaines limites demeurent dans la nuance, la précision soutenue ou la stabilité lorsque les sujets deviennent plus complexes ou abstraits.",
+    },
+  ],
+  C1: [
+    {
+      id: "cefr-c1-conclusion",
+      category: "Conclusion",
+      title: "C1 - Avancé",
+      text: "La performance observée correspond à un profil C1. La personne candidate communique avec fluidité et spontanéité, structure clairement des idées complexes et adapte généralement son discours au contexte professionnel.",
+    },
+    {
+      id: "cefr-c1-professional",
+      category: "Contexte professionnel",
+      title: "Idées complexes",
+      text: "La personne candidate peut traiter des sujets professionnels complexes, justifier des recommandations, nuancer ses propos et répondre efficacement aux questions de suivi.",
+    },
+  ],
+  "C1+": [
+    {
+      id: "cefr-c1-plus-conclusion",
+      category: "Conclusion",
+      title: "C1+ - Avancé très solide",
+      text: "La performance observée correspond à un profil C1+ très solide. La personne candidate traite des sujets professionnels et abstraits avec précision, nuance et souplesse, tout en maintenant une interaction très efficace.",
+    },
+    {
+      id: "cefr-c1-plus-nuance",
+      category: "Nuance",
+      title: "C2 non confirmé",
+      text: "Malgré une performance avancée très solide, le niveau C2 n'est confirmé que si la maîtrise est constamment exceptionnelle, naturelle, précise et nuancée dans l'ensemble des tâches.",
+    },
+  ],
+  C2: [
+    {
+      id: "cefr-c2-conclusion",
+      category: "Conclusion",
+      title: "C2 - Maîtrise",
+      text: "La performance observée correspond à un profil C2. La personne candidate démontre une maîtrise exceptionnelle du français oral dans des contextes professionnels, complexes et abstraits.",
+    },
+    {
+      id: "cefr-c2-professional",
+      category: "Contexte professionnel",
+      title: "Performance exceptionnelle",
+      text: "La personne candidate exprime des distinctions subtiles, reformule naturellement, interagit avec aisance et maintient l'exactitude, la nuance et la précision de façon constante. Ce niveau doit rester réservé à une performance constamment exceptionnelle.",
     },
   ],
 };
@@ -1156,8 +1357,12 @@ const quickTagGroups: QuickTagGroup[] = [
     tone: "neutral",
     view: "global",
     tags: [
+      "mots isolés",
+      "phrases mémorisées",
+      "réponses non autonomes",
       "communication fonctionnelle",
       "bonne autonomie dans l'échange",
+      "autonomie partielle",
       "performance inégale selon la tâche",
       "réponses très courtes",
       "soutien fréquent requis",
@@ -1217,7 +1422,9 @@ const quickTagGroups: QuickTagGroup[] = [
       "organisation peu claire",
       "connecteurs limités",
       "explication incomplète",
+      "explication simple mais inégale",
       "justification faible",
+      "justification de base",
       "difficulté à comparer des options",
       "difficulté à donner des exemples",
     ],
@@ -1317,10 +1524,16 @@ const quickTagGroups: QuickTagGroup[] = [
     view: "strengths",
     tags: [
       "argumentation nuancée",
+      "nuance soutenue",
+      "souplesse discursive",
+      "précision soutenue",
       "registre adapté au niveau exécutif",
       "diplomatie sous pression",
       "abstraction maîtrisée",
       "vocabulaire spécialisé précis",
+      "maîtrise exceptionnelle",
+      "aisance quasi native",
+      "nuance constante exceptionnelle",
     ],
   },
   {
@@ -1358,7 +1571,10 @@ const quickTagGroups: QuickTagGroup[] = [
 ];
 
 const frequentTagValues = [
+  "mots isolés",
+  "réponses non autonomes",
   "communication fonctionnelle",
+  "autonomie partielle",
   "réponses très courtes",
   "soutien fréquent requis",
   "compréhension limitée sans reformulation",
@@ -1370,11 +1586,17 @@ const frequentTagValues = [
   "prononciation généralement claire",
   "maîtrise des temps du passé",
   "a justifié une recommandation",
+  "nuance soutenue",
+  "maîtrise exceptionnelle",
 ];
 
 const tagLabels: Record<string, string> = {
+  "mots isolés": "mots isolés",
+  "phrases mémorisées": "mémorisé",
+  "réponses non autonomes": "non autonome",
   "communication fonctionnelle": "fonctionnelle",
   "bonne autonomie dans l'échange": "autonomie",
+  "autonomie partielle": "autonomie part.",
   "performance inégale selon la tâche": "inégale",
   "réponses très courtes": "réponses courtes",
   "soutien fréquent requis": "soutien requis",
@@ -1411,7 +1633,9 @@ const tagLabels: Record<string, string> = {
   "organisation peu claire": "organisation",
   "connecteurs limités": "connecteurs",
   "explication incomplète": "explication",
+  "explication simple mais inégale": "explication inégale",
   "justification faible": "justification",
+  "justification de base": "justification base",
   "difficulté à comparer des options": "comparaison",
   "difficulté à donner des exemples": "exemples",
   "besoin de relances fréquentes": "relances +",
@@ -1469,7 +1693,13 @@ Object.assign(tagLabels, {
   "nuance et précision soutenues": "nuance C+",
   "autonomie complète sur sujets abstraits": "autonomie C+",
   "argumentation nuancée": "argumentation C",
+  "nuance soutenue": "nuance C1+",
+  "souplesse discursive": "souplesse C1+",
+  "précision soutenue": "précision C1+",
   "registre adapté au niveau exécutif": "registre exec.",
+  "maîtrise exceptionnelle": "maîtrise C2",
+  "aisance quasi native": "aisance C2",
+  "nuance constante exceptionnelle": "nuance C2",
   "diplomatie sous pression": "diplomatie",
   "abstraction maîtrisée": "abstraction",
   "vocabulaire spécialisé précis": "vocab. spéc.",
@@ -4104,7 +4334,9 @@ function getJudgmentPhraseOptions(
 ): JudgmentPhrase[] {
   const band = getJudgmentLevelBand(level, config);
   const basePhrases =
-    config.id === "pfl2-sle" && isFrameworkLevel(level, config)
+    config.id === "cefr-ccc" && isFrameworkLevel(level, config)
+      ? cefrJudgmentPhraseTemplates[level as CEFRLevel]
+      : config.id === "pfl2-sle" && isFrameworkLevel(level, config)
       ? pfl2JudgmentPhraseTemplates[level as SLELevel]
       : judgmentPhraseTemplates[band];
   const observedTags = activeTags.map(({ tag }) => tag);
