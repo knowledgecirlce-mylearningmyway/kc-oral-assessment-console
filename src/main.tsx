@@ -213,38 +213,38 @@ const pfl2AutoTrainingEstimates: Record<
 > = {
   "A-": {
     label: "A- / pré-OF01",
-    toB: "environ 36 à 48 semaines selon le rythme de formation",
-    toC: "environ 54 à 72 semaines selon le rythme de formation",
+    toB: "36 semaines / 1260 h en individuel (ILP)",
+    toC: "54 semaines / 1890 h en individuel (ILP)",
   },
   A: {
     label: "A / OF01-OF12 environ",
-    toB: "environ 28 à 48 semaines selon le point de départ réel",
-    toC: "environ 46 à 72 semaines selon le point de départ réel",
+    toB: "36 semaines / 1260 h en individuel (ILP), estimation budgétaire prudente",
+    toC: "54 semaines / 1890 h en individuel (ILP), estimation budgétaire prudente",
   },
   "A+": {
     label: "A+ / OF13-OF40 environ, zone pré-B",
-    toB: "environ 1 à 36 semaines vers le repère B / OF40-pré-B, à confirmer par la performance orale",
-    toC: "environ 19 à 60 semaines selon le point OF réel",
+    toB: "27 semaines / 945 h en individuel (ILP), estimation budgétaire prudente",
+    toC: "45 semaines / 1575 h en individuel (ILP), estimation budgétaire prudente",
   },
   "B-": {
     label: "B- / proche B, mais instable",
-    toB: "consolidation courte à prévoir avant de confirmer un B fonctionnel stable",
-    toC: "environ 19 à 36 semaines selon le point de départ réel et la stabilité du B",
+    toB: "1 semaine / 35 h en individuel (ILP) pour consolider le repère OF40-pré-B",
+    toC: "19 semaines / 665 h en individuel (ILP)",
   },
   B: {
     label: "B / niveau fonctionnel confirmé",
     toB: "niveau B atteint selon l'évaluation finale",
-    toC: "environ 18 à 24 semaines vers C selon le rythme et la progression réelle",
+    toC: "18 semaines / 630 h en individuel (ILP)",
   },
   "B+": {
     label: "B+ / transition vers C",
     toB: "niveau B atteint selon l'évaluation finale",
-    toC: "environ 9 à 18 semaines vers C selon le rythme et la progression réelle",
+    toC: "9 semaines / 315 h en individuel (ILP)",
   },
   "C-": {
     label: "C- / proche C, mais instable",
     toB: "niveau B atteint selon l'évaluation finale",
-    toC: "consolidation ciblée à prévoir avant de confirmer un C fonctionnel stable",
+    toC: "4 semaines / 140 h en individuel (ILP) de consolidation ciblée avant confirmation du C",
   },
   C: {
     label: "C / niveau fonctionnel confirmé",
@@ -2593,8 +2593,8 @@ function normalizeTrainingEstimate(settings?: Partial<TrainingEstimateSettings>)
   };
 }
 
-function formatPfl2Weeks(groupWeeks: number, ilpWeeks: number) {
-  return `${groupWeeks} semaines en groupe / ${ilpWeeks} semaines en ILP`;
+function formatPfl2IndividualWeeks(ilpWeeks: number) {
+  return `${ilpWeeks} semaines / ${ilpWeeks * 35} h en individuel (ILP)`;
 }
 
 function getPfl2TrainingEstimate(settings: TrainingEstimateSettings, level: AssessmentLevel | "") {
@@ -2617,8 +2617,8 @@ function getPfl2TrainingEstimate(settings: TrainingEstimateSettings, level: Asse
       };
     }
 
-    const toB = formatPfl2Weeks(point.groupB, point.ilpB);
-    const toC = formatPfl2Weeks(point.groupC, point.ilpC);
+    const toB = formatPfl2IndividualWeeks(point.ilpB);
+    const toC = formatPfl2IndividualWeeks(point.ilpC);
 
     return {
       title: `Point de départ : ${point.label}`,
@@ -2630,7 +2630,7 @@ function getPfl2TrainingEstimate(settings: TrainingEstimateSettings, level: Asse
 Point de départ utilisé : ${point.label}
 - Vers B / repère OF40-pré-B : ${toB}.
 - Vers C / Milestone 6 : ${toC}.
-Cette estimation est indicative. Elle dépend du rythme de formation, de l'assiduité, de l'exposition au français, de la progression réelle et de la confirmation de la performance orale par l'évaluateur ou l'évaluatrice.`,
+Cette estimation est basée sur les durées individuelles (ILP) du document de référence. Elle demeure indicative et dépend de l'assiduité, de l'exposition au français, de la progression réelle et de la confirmation de la performance orale par l'évaluateur ou l'évaluatrice.`,
     };
   }
 
@@ -2654,7 +2654,7 @@ Cette estimation est indicative. Elle dépend du rythme de formation, de l'assid
 Point de départ utilisé : ${estimate.label}
 - Temps estimé vers B : ${estimate.toB}.
 - Temps estimé vers C : ${estimate.toC}.
-Cette estimation est indicative. Elle dépend du rythme de formation, de l'assiduité, de l'exposition au français, de la progression réelle et de la confirmation de la performance orale par l'évaluateur ou l'évaluatrice.`,
+Cette estimation est basée sur les durées individuelles (ILP) du document de référence. Elle demeure indicative et dépend de l'assiduité, de l'exposition au français, de la progression réelle et de la confirmation de la performance orale par l'évaluateur ou l'évaluatrice.`,
   };
 }
 
@@ -3904,11 +3904,7 @@ ${recommendations}`;
                       </button>
                     ) : null}
                   </label>
-                </div>
-              </section>
 
-              {hasValidatedFinalLevel ? (
-                <>
                   {showTrainingEstimatePanel ? (
                     <section className="panel trainingEstimatePanel" aria-label="Estimation indicative de parcours PFL2">
                       <div className="panelHeader">
@@ -3935,12 +3931,12 @@ ${recommendations}`;
                               })
                             }
                           >
-                            <option value="auto">Automatique par niveau final</option>
+                            <option value="auto">Planification budgétaire par niveau final</option>
                             <option value="of">Préciser le point OF</option>
                             <option value="none">Ne pas inclure d'estimation</option>
                           </select>
                           <small>
-                            Le mode automatique utilise le niveau final. Le point OF permet une estimation plus précise.
+                            Le mode budgétaire donne une valeur unique. Le point OF permet une estimation plus précise.
                           </small>
                         </label>
 
@@ -3971,14 +3967,18 @@ ${recommendations}`;
                           ))}
                           {session.trainingEstimate.mode !== "none" ? (
                             <small>
-                              Les durées proviennent des repères PFL2/CSPS du document fourni et restent indicatives.
+                              Les durées utilisent les repères individuels ILP du document fourni, sur une base de 35 h par semaine.
                             </small>
                           ) : null}
                         </div>
                       </div>
                     </section>
                   ) : null}
+                </div>
+              </section>
 
+              {hasValidatedFinalLevel ? (
+                <>
                   <section className="panel phraseBankPanel" aria-label="Banque de formulations rapportables">
                     <div className="phraseBank">
                       <div>

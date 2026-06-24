@@ -1608,8 +1608,10 @@ button:disabled {
 
 .trainingEstimatePanel {
   overflow: hidden;
-  border-color: #cfe2d7;
-  background: #fbfffc;
+  border-color: #b7d7df;
+  border-left: 5px solid #2f7f95;
+  background: linear-gradient(135deg, #f1fbfd 0%, #f7fffb 100%);
+  box-shadow: 0 14px 28px rgba(33, 95, 118, 0.1);
 }
 
 .trainingEstimateGrid {
@@ -1818,6 +1820,11 @@ button:disabled {
 .postInterviewFooter .suggestionBox,
 .postInterviewFooter .finalLevel,
 .postInterviewFooter .coherenceAlert {
+  margin: 0;
+}
+
+.postInterviewFooter .trainingEstimatePanel {
+  grid-column: 1 / -1;
   margin: 0;
 }
 
