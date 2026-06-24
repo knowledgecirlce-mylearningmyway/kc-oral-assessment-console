@@ -44,6 +44,13 @@ interface AssessmentNotes {
   finalJudgment: string;
 }
 
+type TrainingEstimateMode = "auto" | "of" | "none";
+
+type TrainingEstimateSettings = {
+  mode: TrainingEstimateMode;
+  point: string;
+};
+
 interface OralAssessmentSession {
   id: string;
   frameworkId: FrameworkId;
@@ -53,6 +60,7 @@ interface OralAssessmentSession {
   selectedStage: string;
   summary: string;
   cExtensionEnabled?: boolean;
+  trainingEstimate: TrainingEstimateSettings;
   createdAt: string;
   updatedAt: string;
 }
@@ -193,6 +201,106 @@ const performanceLabels: Record<PerformanceValue, string> = {
   2: "Fonctionnel",
   3: "Solide",
 };
+
+const defaultTrainingEstimate: TrainingEstimateSettings = {
+  mode: "auto",
+  point: "",
+};
+
+const pfl2AutoTrainingEstimates: Record<
+  SLELevel,
+  { label: string; toB: string; toC: string }
+> = {
+  "A-": {
+    label: "A- / pré-OF01",
+    toB: "environ 36 à 48 semaines selon le rythme de formation",
+    toC: "environ 54 à 72 semaines selon le rythme de formation",
+  },
+  A: {
+    label: "A / OF01-OF12 environ",
+    toB: "environ 28 à 48 semaines selon le point de départ réel",
+    toC: "environ 46 à 72 semaines selon le point de départ réel",
+  },
+  "A+": {
+    label: "A+ / OF13-OF40 environ, zone pré-B",
+    toB: "environ 1 à 36 semaines vers le repère B / OF40-pré-B, à confirmer par la performance orale",
+    toC: "environ 19 à 60 semaines selon le point OF réel",
+  },
+  "B-": {
+    label: "B- / proche B, mais instable",
+    toB: "consolidation courte à prévoir avant de confirmer un B fonctionnel stable",
+    toC: "environ 19 à 36 semaines selon le point de départ réel et la stabilité du B",
+  },
+  B: {
+    label: "B / niveau fonctionnel confirmé",
+    toB: "niveau B atteint selon l'évaluation finale",
+    toC: "environ 18 à 24 semaines vers C selon le rythme et la progression réelle",
+  },
+  "B+": {
+    label: "B+ / transition vers C",
+    toB: "niveau B atteint selon l'évaluation finale",
+    toC: "environ 9 à 18 semaines vers C selon le rythme et la progression réelle",
+  },
+  "C-": {
+    label: "C- / proche C, mais instable",
+    toB: "niveau B atteint selon l'évaluation finale",
+    toC: "consolidation ciblée à prévoir avant de confirmer un C fonctionnel stable",
+  },
+  C: {
+    label: "C / niveau fonctionnel confirmé",
+    toB: "niveau B atteint selon l'évaluation finale",
+    toC: "niveau C atteint selon l'évaluation finale",
+  },
+  "C+": {
+    label: "C+ / avancé",
+    toB: "niveau B atteint selon l'évaluation finale",
+    toC: "niveau C atteint ou dépassé selon l'évaluation finale",
+  },
+};
+
+const pfl2OfTrainingEstimates = [
+  { point: "pre-of01", label: "Pré-OF01 / très grand débutant", groupB: 48, groupC: 72, ilpB: 36, ilpC: 54 },
+  { point: "OF01", label: "OF01", groupB: 48, groupC: 72, ilpB: 36, ilpC: 54 },
+  { point: "OF02", label: "OF02", groupB: 47, groupC: 71, ilpB: 35, ilpC: 53 },
+  { point: "OF03", label: "OF03", groupB: 46, groupC: 70, ilpB: 35, ilpC: 53 },
+  { point: "OF04", label: "OF04", groupB: 45, groupC: 69, ilpB: 34, ilpC: 52 },
+  { point: "OF05", label: "OF05", groupB: 44, groupC: 68, ilpB: 33, ilpC: 51 },
+  { point: "OF06", label: "OF06", groupB: 43, groupC: 67, ilpB: 32, ilpC: 50 },
+  { point: "OF07", label: "OF07", groupB: 42, groupC: 66, ilpB: 32, ilpC: 50 },
+  { point: "OF08", label: "OF08", groupB: 41, groupC: 65, ilpB: 31, ilpC: 49 },
+  { point: "OF09", label: "OF09", groupB: 40, groupC: 64, ilpB: 30, ilpC: 48 },
+  { point: "OF10", label: "OF10", groupB: 39, groupC: 63, ilpB: 29, ilpC: 47 },
+  { point: "OF11", label: "OF11", groupB: 38, groupC: 62, ilpB: 29, ilpC: 47 },
+  { point: "OF12", label: "OF12", groupB: 37, groupC: 61, ilpB: 28, ilpC: 46 },
+  { point: "OF13", label: "OF13", groupB: 36, groupC: 60, ilpB: 27, ilpC: 45 },
+  { point: "OF14", label: "OF14", groupB: 35, groupC: 59, ilpB: 26, ilpC: 44 },
+  { point: "OF15", label: "OF15", groupB: 34, groupC: 58, ilpB: 25, ilpC: 43 },
+  { point: "OF16", label: "OF16", groupB: 33, groupC: 57, ilpB: 24, ilpC: 42 },
+  { point: "OF17", label: "OF17", groupB: 32, groupC: 56, ilpB: 23, ilpC: 41 },
+  { point: "OF18", label: "OF18", groupB: 30, groupC: 54, ilpB: 23, ilpC: 41 },
+  { point: "OF19", label: "OF19", groupB: 29, groupC: 53, ilpB: 22, ilpC: 40 },
+  { point: "OF20", label: "OF20", groupB: 28, groupC: 52, ilpB: 21, ilpC: 39 },
+  { point: "OF21", label: "OF21", groupB: 27, groupC: 51, ilpB: 20, ilpC: 38 },
+  { point: "OF22", label: "OF22", groupB: 26, groupC: 50, ilpB: 19, ilpC: 37 },
+  { point: "OF23", label: "OF23", groupB: 24, groupC: 48, ilpB: 18, ilpC: 36 },
+  { point: "OF24", label: "OF24", groupB: 23, groupC: 47, ilpB: 17, ilpC: 35 },
+  { point: "OF25", label: "OF25", groupB: 22, groupC: 46, ilpB: 16, ilpC: 34 },
+  { point: "OF26", label: "OF26", groupB: 21, groupC: 45, ilpB: 15, ilpC: 33 },
+  { point: "OF27", label: "OF27", groupB: 20, groupC: 44, ilpB: 14, ilpC: 32 },
+  { point: "OF28", label: "OF28", groupB: 18, groupC: 42, ilpB: 14, ilpC: 32 },
+  { point: "OF29", label: "OF29", groupB: 17, groupC: 41, ilpB: 13, ilpC: 31 },
+  { point: "OF30", label: "OF30", groupB: 16, groupC: 40, ilpB: 12, ilpC: 30 },
+  { point: "OF31", label: "OF31", groupB: 15, groupC: 39, ilpB: 11, ilpC: 29 },
+  { point: "OF32", label: "OF32", groupB: 14, groupC: 38, ilpB: 10, ilpC: 28 },
+  { point: "OF33", label: "OF33", groupB: 12, groupC: 36, ilpB: 9, ilpC: 27 },
+  { point: "OF34", label: "OF34", groupB: 11, groupC: 35, ilpB: 8, ilpC: 26 },
+  { point: "OF35", label: "OF35", groupB: 9, groupC: 33, ilpB: 7, ilpC: 25 },
+  { point: "OF36", label: "OF36", groupB: 8, groupC: 32, ilpB: 6, ilpC: 24 },
+  { point: "OF37", label: "OF37", groupB: 6, groupC: 30, ilpB: 5, ilpC: 23 },
+  { point: "OF38", label: "OF38", groupB: 5, groupC: 29, ilpB: 3, ilpC: 21 },
+  { point: "OF39", label: "OF39", groupB: 3, groupC: 27, ilpB: 2, ilpC: 20 },
+  { point: "OF40", label: "OF40 / pré-B", groupB: 2, groupC: 26, ilpB: 1, ilpC: 19 },
+];
 
 const evaluatorGuideSteps = [
   "Remplir les renseignements, puis cliquer sur Passer à l'évaluation.",
@@ -2428,6 +2536,7 @@ function createSession(frameworkId: FrameworkId = "cefr-ccc"): OralAssessmentSes
     selectedStage: config.stages[0].id,
     summary: "",
     cExtensionEnabled: false,
+    trainingEstimate: { ...defaultTrainingEstimate },
     createdAt: now,
     updatedAt: now,
   };
@@ -2471,6 +2580,82 @@ function getGroupShortLabel(group: QuickTagGroup) {
   if (title.includes("prononciation")) return "Prononciation";
   if (title.includes("approfondissement c")) return "C avancé";
   return "Force";
+}
+
+function normalizeTrainingEstimate(settings?: Partial<TrainingEstimateSettings>): TrainingEstimateSettings {
+  const mode: TrainingEstimateMode =
+    settings?.mode === "of" || settings?.mode === "none" || settings?.mode === "auto" ? settings.mode : "auto";
+  const point = pfl2OfTrainingEstimates.some((item) => item.point === settings?.point) ? settings?.point ?? "" : "";
+
+  return {
+    mode,
+    point,
+  };
+}
+
+function formatPfl2Weeks(groupWeeks: number, ilpWeeks: number) {
+  return `${groupWeeks} semaines en groupe / ${ilpWeeks} semaines en ILP`;
+}
+
+function getPfl2TrainingEstimate(settings: TrainingEstimateSettings, level: AssessmentLevel | "") {
+  if (settings.mode === "none") {
+    return {
+      title: "Estimation non incluse",
+      lines: ["Aucune estimation de durée ne sera ajoutée au résumé généré."],
+      reportText: "",
+    };
+  }
+
+  if (settings.mode === "of") {
+    const point = pfl2OfTrainingEstimates.find((item) => item.point === settings.point);
+
+    if (!point) {
+      return {
+        title: "Point OF à préciser",
+        lines: ["Choisissez un point OF estimé pour afficher une estimation plus précise."],
+        reportText: "",
+      };
+    }
+
+    const toB = formatPfl2Weeks(point.groupB, point.ilpB);
+    const toC = formatPfl2Weeks(point.groupC, point.ilpC);
+
+    return {
+      title: `Point de départ : ${point.label}`,
+      lines: [
+        `Vers B / repère OF40-pré-B : ${toB}.`,
+        `Vers C / Milestone 6 : ${toC}.`,
+      ],
+      reportText: `Estimation indicative de parcours PFL2 :
+Point de départ utilisé : ${point.label}
+- Vers B / repère OF40-pré-B : ${toB}.
+- Vers C / Milestone 6 : ${toC}.
+Cette estimation est indicative. Elle dépend du rythme de formation, de l'assiduité, de l'exposition au français, de la progression réelle et de la confirmation de la performance orale par l'évaluateur ou l'évaluatrice.`,
+    };
+  }
+
+  if (!level || !pfl2AutoTrainingEstimates[level as SLELevel]) {
+    return {
+      title: "Niveau final à valider",
+      lines: ["Validez le niveau final PFL2/SLE pour afficher une estimation automatique."],
+      reportText: "",
+    };
+  }
+
+  const estimate = pfl2AutoTrainingEstimates[level as SLELevel];
+
+  return {
+    title: `Estimation automatique : ${estimate.label}`,
+    lines: [
+      `Temps estimé vers B : ${estimate.toB}.`,
+      `Temps estimé vers C : ${estimate.toC}.`,
+    ],
+    reportText: `Estimation indicative de parcours PFL2 :
+Point de départ utilisé : ${estimate.label}
+- Temps estimé vers B : ${estimate.toB}.
+- Temps estimé vers C : ${estimate.toC}.
+Cette estimation est indicative. Elle dépend du rythme de formation, de l'assiduité, de l'exposition au français, de la progression réelle et de la confirmation de la performance orale par l'évaluateur ou l'évaluatrice.`,
+  };
 }
 
 function App() {
@@ -2541,6 +2726,8 @@ function App() {
   const judgmentPhraseOptions = getJudgmentPhraseOptions(finalLevel, activeTagEvidence, performance, tagStats, activeFramework);
   const hasFinalJudgment = Boolean(session.notes.finalJudgment.trim());
   const hasValidatedFinalLevel = Boolean(session.ratings.finalLevel);
+  const showTrainingEstimatePanel = activeFramework.id === "pfl2-sle" && hasValidatedFinalLevel;
+  const trainingEstimate = getPfl2TrainingEstimate(session.trainingEstimate, session.ratings.finalLevel);
   const structuredNoteFields = noteFields.filter((field) => field.key !== "finalJudgment");
 
   function updateCandidate<K extends keyof CandidateInfo>(key: K, value: CandidateInfo[K]) {
@@ -2563,6 +2750,15 @@ function App() {
     setSession((current) => ({
       ...current,
       notes: { ...current.notes, [key]: value },
+      updatedAt: new Date().toISOString(),
+    }));
+  }
+
+  function updateTrainingEstimate(next: Partial<TrainingEstimateSettings>) {
+    setSession((current) => ({
+      ...current,
+      trainingEstimate: normalizeTrainingEstimate({ ...current.trainingEstimate, ...next }),
+      summary: "",
       updatedAt: new Date().toISOString(),
     }));
   }
@@ -2810,6 +3006,10 @@ function App() {
       ? `\nPoint de cohérence à vérifier :\n${coherenceAlert}\n`
       : "";
     const disclaimerLine = activeFramework.disclaimer ? `\nNote importante :\n${activeFramework.disclaimer}\n` : "";
+    const trainingEstimateLine =
+      activeFramework.id === "pfl2-sle"
+        ? `\n${getPfl2TrainingEstimate(session.trainingEstimate, confirmedLevel).reportText}\n`
+        : "";
 
     const generated = `Personne candidate :
 ${session.candidate.fullName || "[Nom complet de la personne candidate]"}
@@ -2832,6 +3032,7 @@ ${session.candidate.evaluatorName || "[Nom de l'évaluateur ou de l'évaluatrice
 ${activeFramework.finalProfileLabel} :
 ${level}
 ${disclaimerLine}
+${trainingEstimateLine}
 
 Observations par critère :
 ${criterionLines}
@@ -3032,7 +3233,11 @@ ${recommendations}`;
 
   function scrollAfterFinalLevelSelection(level: AssessmentLevel) {
     const nextCoherenceAlert = getCoherenceAlert(level, suggestedLevel, tagStats, activeFramework);
-    const selector = nextCoherenceAlert ? ".coherenceAlert" : ".phraseBankPanel";
+    const selector = nextCoherenceAlert
+      ? ".coherenceAlert"
+      : activeFramework.id === "pfl2-sle"
+        ? ".trainingEstimatePanel"
+        : ".phraseBankPanel";
     const block: ScrollLogicalPosition = nextCoherenceAlert ? "center" : "start";
 
     window.setTimeout(() => {
@@ -3061,6 +3266,7 @@ ${recommendations}`;
       selectedStage: firstStage,
       summary: "",
       cExtensionEnabled: false,
+      trainingEstimate: { ...defaultTrainingEstimate },
       updatedAt: new Date().toISOString(),
     }));
     setLastLiveStage(firstStage);
@@ -3703,6 +3909,76 @@ ${recommendations}`;
 
               {hasValidatedFinalLevel ? (
                 <>
+                  {showTrainingEstimatePanel ? (
+                    <section className="panel trainingEstimatePanel" aria-label="Estimation indicative de parcours PFL2">
+                      <div className="panelHeader">
+                        <div>
+                          <p className="eyebrow">PFL2 / SLE</p>
+                          <h2>Estimation indicative de parcours</h2>
+                          <p>
+                            Ajoutez au rapport une projection prudente vers B et C. L'estimation reste indicative et
+                            doit être interprétée par l'évaluateur ou l'évaluatrice.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="trainingEstimateGrid">
+                        <label className="ratingField">
+                          <span>Mode d'estimation</span>
+                          <select
+                            aria-label="Mode d'estimation de parcours PFL2"
+                            value={session.trainingEstimate.mode}
+                            onChange={(event) =>
+                              updateTrainingEstimate({
+                                mode: event.target.value as TrainingEstimateMode,
+                                point: event.target.value === "of" ? session.trainingEstimate.point : "",
+                              })
+                            }
+                          >
+                            <option value="auto">Automatique par niveau final</option>
+                            <option value="of">Préciser le point OF</option>
+                            <option value="none">Ne pas inclure d'estimation</option>
+                          </select>
+                          <small>
+                            Le mode automatique utilise le niveau final. Le point OF permet une estimation plus précise.
+                          </small>
+                        </label>
+
+                        {session.trainingEstimate.mode === "of" ? (
+                          <label className="ratingField">
+                            <span>Point de départ estimé</span>
+                            <select
+                              aria-label="Point de départ OF estimé"
+                              value={session.trainingEstimate.point}
+                              onChange={(event) => updateTrainingEstimate({ point: event.target.value })}
+                            >
+                              <option value="">Choisir un point OF</option>
+                              {pfl2OfTrainingEstimates.map((item) => (
+                                <option key={item.point} value={item.point}>
+                                  {item.label}
+                                </option>
+                              ))}
+                            </select>
+                            <small>Utilisez ce choix seulement si l'entretien permet de situer le point OF avec confiance.</small>
+                          </label>
+                        ) : null}
+
+                        <div className="trainingEstimatePreview">
+                          <span>Aperçu rapportable</span>
+                          <strong>{trainingEstimate.title}</strong>
+                          {trainingEstimate.lines.map((line) => (
+                            <p key={line}>{line}</p>
+                          ))}
+                          {session.trainingEstimate.mode !== "none" ? (
+                            <small>
+                              Les durées proviennent des repères PFL2/CSPS du document fourni et restent indicatives.
+                            </small>
+                          ) : null}
+                        </div>
+                      </div>
+                    </section>
+                  ) : null}
+
                   <section className="panel phraseBankPanel" aria-label="Banque de formulations rapportables">
                     <div className="phraseBank">
                       <div>
@@ -4044,6 +4320,18 @@ function EvaluatorGuidePage({ framework, onClose }: { framework: FrameworkConfig
             <li>Relisez toujours le résumé avant de le copier dans le rapport.</li>
           </ul>
         </section>
+
+        {framework.id === "pfl2-sle" ? (
+          <section className="guideBlock guideBlockWide">
+            <h3>Estimation indicative de parcours PFL2</h3>
+            <ul>
+              <li><strong>Automatique par niveau final</strong> : utilisez ce mode si vous voulez une fourchette rapide et prudente.</li>
+              <li><strong>Préciser le point OF</strong> : utilisez ce mode si l'entretien permet de situer le point de départ avec plus de confiance.</li>
+              <li><strong>Ne pas inclure d'estimation</strong> : utilisez ce mode si le rapport ne doit pas contenir de projection de durée.</li>
+              <li>L'estimation reste indicative et ne constitue pas une garantie d'atteinte du niveau B ou C.</li>
+            </ul>
+          </section>
+        ) : null}
 
         <section className="guideBlock guideBlockWide">
           <h3>Banque d'évaluation finale</h3>
@@ -4555,6 +4843,7 @@ function normalizeSession(draft: Partial<OralAssessmentSession>): OralAssessment
       ? draft.selectedStage ?? allowedStages[0].id
       : allowedStages[0].id,
     cExtensionEnabled,
+    trainingEstimate: normalizeTrainingEstimate(draft.trainingEstimate),
     summary: draft.summary ?? "",
     createdAt: draft.createdAt ?? fallback.createdAt,
     updatedAt: draft.updatedAt ?? fallback.updatedAt,
